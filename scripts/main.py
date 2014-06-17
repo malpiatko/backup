@@ -16,6 +16,7 @@ def main():
 	outputFile = open('output.txt', 'w+')
 	sys.stdout = outputFile
 	changedFiles = md5dir.md5dir(currentDir, md5dir.master_list(currentDir), master=True)
+	sys.stdout = sys.__stdout__
 	outputFile.close()
 	print "blab"
 
