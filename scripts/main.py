@@ -17,6 +17,7 @@ def main():
 	sys.stdout = outputFile
 	changedFiles = md5dir.md5dir(currentDir, md5dir.master_list(currentDir), master=True)
 	outputFile.close()
+	print "blab"
 
 	# Send the emails to relevant people.
 	emails = cf.getEmails()
