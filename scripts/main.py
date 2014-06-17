@@ -1,14 +1,26 @@
 #!/usr/bin/python
 import smtplib
 import configReader
+import md5dir
+import os
+import sys
 
 from email.mime.text import MIMEText
 
 def main():
+	# Read configuration file
 	cf = configReader.ConfigReader("config.txt")
+	currentDir = os.getcwd()
+
+	# Find the changes since last update and save to output.txt
+	outputFile = open('output.txt', 'w+')
+	sys.stdout = outputFile
+	changedFiles = md5dir.md5dir(currentDir, md5dir.master_list(currentDir), master=True)
+	outputFile.close()
+
+	# Send the emails to relevant people.
 	emails = cf.getEmails()
 	sendEmail(emails, "output.txt")
-	print "hello"
 
 def getFileContent(name):
 	"""Returns the content of the file with given name"""
