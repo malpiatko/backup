@@ -86,6 +86,7 @@ import os.path as op
 import re
 import struct
 import sys
+import magic
 
 hashfile = "md5sum" # Default name for checksum file 
 check = True        # Whether to check for changes
@@ -115,7 +116,6 @@ def calculateUID(filepath):
     start = f.tell()
     if f.read(3) == "ID3":
         # Bytes w major/minor version (3-4)
-        version = f.read(2)
         # Flags byte (5)
         flags = struct.unpack("B", f.read(1))[0]
         # Flat bit 4 means footer is present (10 bytes)
@@ -197,6 +197,7 @@ def calcsum(filepath, mp3mode):
         sys.stdout.flush()
     return h.hexdigest()
 
+
 def log(msg, filename):
     """Output a log message"""
     if not quiet:
@@ -238,9 +239,9 @@ def md5dir(root, filenames, master):
     newhash = None
     for fname in filenames:
         if fname == hashfile:
-            continue        
+            continue
+        newhash = calcsum(fname, use_mp3mode)
         if fname not in checksums:
-            newhash = calcsum(fname, use_mp3mode)
             checksums[fname] = newhash
             if newhash in deleted:
                 renamed.append((deleted[newhash], fname))
@@ -256,7 +257,6 @@ def md5dir(root, filenames, master):
             else:
                 added.append(fname)
         elif check:
-            newhash = calcsum(fname, use_mp3mode)
             if checksums[fname] == newhash:
                 confirmed.append(fname)
             else:
@@ -304,7 +304,7 @@ def md5dir(root, filenames, master):
         if checksums:
             try:
                 writesums(hashfile, checksums.iteritems(), master, use_mp3mode)
-            except IOError, e:
+            except IOError:
                 log("WARNING", "Error writing to %s" % op.join(root, hashfile))
         elif op.isfile(hashfile):
             os.remove(hashfile)
@@ -320,12 +320,16 @@ def master_list(start):
     # Collect all files under start
     for root, dirs, files in os.walk("."):
         for fname in files:
-            # Only keep the topmost hash file
-            if fname == hashfile and root != ".":
-                log("REMOVING", op.join(root,fname))
-                os.remove(op.join(root,fname))
-            else:
-                flist.append(op.join(root[2:],fname))
+            with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+                fileType = m.id_filename(op.join(root[2:],fname))
+            # Ignore sockets and symbolic links.
+            if fileType != "inode/socket" and not op.islink(op.join(root,fname)):
+                # Only keep the topmost hash file
+                if fname == hashfile and root != ".":
+                    log("REMOVING", op.join(root,fname))
+                    os.remove(op.join(root,fname))
+                else:
+                    flist.append(op.join(root[2:],fname))
     os.chdir(oldcwd)
     return flist
     

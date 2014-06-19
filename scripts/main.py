@@ -2,10 +2,10 @@
 import smtplib
 import configReader
 import md5dir
-import os
 import sys
 import argparse
 import datetime
+import os
 
 from email.mime.text import MIMEText
 
@@ -18,8 +18,9 @@ def main(directory, config, output, stdout=False):
 		outputFile = open(output, "w+")
 		# Since md5dir function outputs to standard output we have to set the stdout to
 		# our destination file for the time of executing the function.
+		# TODO: Instead of the stdout trick use: just do changedFiles = subprocess.check_output(shlex.split("python md5dir.py -m %s" % directory))
 		sys.stdout = outputFile
-		changedFiles = md5dir.md5dir(directory, md5dir.master_list(directory), master=True)
+		md5dir.md5dir(directory, md5dir.master_list(directory), master=True)
 		# Reset stdout to default.
 		sys.stdout = sys.__stdout__
 		outputFile.write(str(datetime.datetime.now()))
@@ -28,7 +29,7 @@ def main(directory, config, output, stdout=False):
 		md5dir.md5dir(directory, md5dir.master_list(directory), master=True)
 
 	# Send the emails to relevant people.
-	emails = cf.getEmails()
+	emails = cf.emails
 	#sendEmail(emails, output)
 
 def getFileContent(name):
@@ -51,7 +52,7 @@ def sendEmail(addrs, fileName):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument("dir", help=("Directory on which you want to perform the file comparison." 
+	parser.add_argument("dir", default=".", help=("Directory on which you want to perform the file comparison." 
 		"Note the directory needs to have the md5sum already."))
 	parser.add_argument("-c", "--config", help=("The location to the config file. By default it's"
 		"config.txt in the directory to be analyzed."))
@@ -61,14 +62,12 @@ if __name__ == "__main__":
 	 "not saved to file but is written to standard output. It's pure purspose is debugging."))
 	args = parser.parse_args()
 
-	# Directory
-	directory = args.dir if args.dir else "."
 	# Config file location
-	config = args.config if args.config else directory + "/config.txt"
+	config = args.config if args.config else os.path.join(args.dir, "config.txt")
 	# Output file
-	output = args.output if args.output else directory + "/output.txt"
+	output = args.output if args.output else os.path.join(args.dir, "output.txt")
 	# Standard output
 	if args.stdout:
-		main(directory, config, output, stdout=True)
+		main(args.dir, config, output, stdout=True)
 	else:
-		main(directory, config, output)
+		main(args.dir, config, output)
