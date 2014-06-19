@@ -6,6 +6,9 @@ import sys
 import argparse
 import datetime
 import os
+import subprocess
+import shlex
+import os.path as op
 
 from email.mime.text import MIMEText
 
@@ -14,19 +17,16 @@ def main(directory, config, output, stdout=False):
 	cf = configReader.ConfigReader(config)
 
 	# Find the changes since last update and write to output.txt or standard output.
+	mdFilePath = op.join(op.dirname(op.realpath(__file__)),"md5dir.py")
+	mdCommandArgs = ["python", mdFilePath, "-m", directory]
 	if not stdout:
-		outputFile = open(output, "w+")
-		# Since md5dir function outputs to standard output we have to set the stdout to
-		# our destination file for the time of executing the function.
-		# TODO: Instead of the stdout trick use: just do changedFiles = subprocess.check_output(shlex.split("python md5dir.py -m %s" % directory))
-		sys.stdout = outputFile
-		md5dir.md5dir(directory, md5dir.master_list(directory), master=True)
-		# Reset stdout to default.
-		sys.stdout = sys.__stdout__
+		outputFile = open(output, "w+")	
+		changedFiles = subprocess.check_output(mdCommandArgs)
+		outputFile.write(changedFiles)
 		outputFile.write(str(datetime.datetime.now()))
 		outputFile.close()
 	else:
-		md5dir.md5dir(directory, md5dir.master_list(directory), master=True)
+		subprocess.call(mdCommandArgs)
 
 	# Send the emails to relevant people.
 	emails = cf.emails
