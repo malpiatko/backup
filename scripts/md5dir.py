@@ -330,7 +330,7 @@ def master_list(start):
                 if fileType != "inode/socket":
                     flist.append(fname)
             except OSError, e:
-                if e.errno == errno.ENOENT:
+                if e.errno == errno.ENOENT or e.errno == errno.ELOOP:
                     print 'BROKEN: %s' % fname
                 else:
                     raise e
