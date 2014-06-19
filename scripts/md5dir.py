@@ -7,10 +7,6 @@ Usage: md5dir [options] [directories]
 Without options it writes an 'md5sum' file in each subdirectory
 containing MD5 checksums for that directories files.
 
-During this it outputs progress dots, and then prints out the names of
-files which have been added, deleted, renamed or changed since the
-last run, and a summary of the number of files in each category.
-
 A file which has been both changed and renamed since the last run
 shows up as DELETED followed by ADDED.
 
@@ -87,6 +83,7 @@ import re
 import struct
 import sys
 import magic
+import errno
 
 hashfile = "md5sum" # Default name for checksum file 
 check = True        # Whether to check for changes
@@ -191,10 +188,6 @@ def calcsum(filepath, mp3mode):
         h.update(s)
         s = f.read(1048576)
     f.close()
-    # Output "." as a progress meter
-    if not quiet:
-        sys.stdout.write(".")
-        sys.stdout.flush()
     return h.hexdigest()
 
 
@@ -297,7 +290,8 @@ def md5dir(root, filenames, master):
         finally:
             logfile.close()
     if update and op.isfile(changelog):
-        op.remove(changelog)
+        print changelog
+        os.remove(changelog)
         
     # Write hashfile if necessary
     if renamed or added or deleted or changed:
@@ -317,19 +311,29 @@ def master_list(start):
     flist = []
     oldcwd = os.getcwd()
     os.chdir(start)
-    # Collect all files under start
-    for root, dirs, files in os.walk("."):
+    # Collect all files under start (follow directory symbolic links).
+    for root, dirs, files in os.walk(".", followlinks=True):
         for fname in files:
-            with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-                fileType = m.id_filename(op.join(root[2:],fname))
-            # Ignore sockets and symbolic links.
-            if fileType != "inode/socket" and not op.islink(op.join(root,fname)):
-                # Only keep the topmost hash file
-                if fname == hashfile and root != ".":
-                    log("REMOVING", op.join(root,fname))
-                    os.remove(op.join(root,fname))
+            fname = op.join(root[2:], fname)
+            # Take care of symbolic links pointing to a file.
+            try:
+                if op.islink(fname):
+                        # We are using this command to check whether the link
+                        # is not broken.
+                        os.stat(fname)
+                        fname = os.readlink(fname)
+                        if not op.isabs(fname):
+                            fname = op.join(root[2:], fname)
+                with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+                    fileType = m.id_filename(fname)
+                # Ignore sockets.
+                if fileType != "inode/socket":
+                    flist.append(fname)
+            except OSError, e:
+                if e.errno == errno.ENOENT:
+                    print 'BROKEN: %s' % fname
                 else:
-                    flist.append(op.join(root[2:],fname))
+                    raise e
     os.chdir(oldcwd)
     return flist
     

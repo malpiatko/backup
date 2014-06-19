@@ -1,13 +1,10 @@
 #!/usr/bin/python
 import smtplib
 import configReader
-import md5dir
-import sys
 import argparse
 import datetime
 import os
 import subprocess
-import shlex
 import os.path as op
 
 from email.mime.text import MIMEText
