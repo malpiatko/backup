@@ -22,12 +22,12 @@ def main(directory, config, output, stdout=False):
 		outputFile.write(changedFiles)
 		outputFile.write(str(datetime.datetime.now()))
 		outputFile.close()
+		# Send the emails to relevant people.
+		emails = cf.emails
+		sendEmail(emails, output)
 	else:
 		subprocess.call(mdCommandArgs)
 
-	# Send the emails to relevant people.
-	emails = cf.emails
-	#sendEmail(emails, output)
 
 def getFileContent(name):
 	"""Returns the content of the file with given name"""
