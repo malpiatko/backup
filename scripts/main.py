@@ -35,14 +35,14 @@ def main(directory, config, output, stdout=False):
 def getFileContent(name):
 	"""Returns the content of the file with given name"""
 	fp = open(name, 'r')
-	content = MIMEText(fp.read())
+	content = fp.read()
 	fp.close()
 	return content
 
 def sendEmail(addrs, fileName):
 	"""Sends an email to each of the addresses specified by addr with
 	the content of the file with fileName."""
-	msg = getFileContent(fileName)
+	msg = MIMEText(getFileContent(fileName))
 	msg['Subject'] = "The content of %s" % fileName
 	msg['From'] = "ela@lshift.net"
 	msg['To'] = ', '.join(addrs)
