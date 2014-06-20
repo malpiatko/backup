@@ -88,6 +88,7 @@ import struct
 import sys
 import magic
 import errno
+import dicdiff
 
 hashfile = "md5sum" # Default name for checksum file 
 check = True        # Whether to check for changes
@@ -99,6 +100,7 @@ update = False      # Whether to update changed checksums
 mp3mode = False     # Whether to use tag-skipping checksum for MP3s
 changelog = "md5changes.txt" # Names of changed files
 sumsoutput = None
+compare = False
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -212,6 +214,23 @@ def makesums(root, filenames, output):
         newhash = calcsum(op.join(root,fname), use_mp3mode)
         checksums[op.abspath(fname)] = newhash
     writesums(output, checksums.iteritems())
+
+def comparemd5files(file1, file2):
+    diff = dicdiff.DictDiffer(readsums(file2),readsums(file1))
+    for fname in diff.added:
+        log("ADDED", op.join(root,fname))
+    for fname in diff.removed:
+        log("DELETED", op.join(root,fname))
+    for fname in diff.changed:
+        if update:
+            log("UPDATED", op.join(root,fname))
+        else:
+            log("CHANGED", op.join(root,fname))
+    log("LOCATION", root)
+    log("STATUS", "confirmed %d added %d deleted %d changed %d" % (
+        len(diff.unchanged), len(diff.added), len(diff.removed), len(diff.changed)))
+
+
 
 
 def md5dir(root, filenames, master):
@@ -356,7 +375,7 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3","confirm", "file=", "help", "license", "master", "nocheck", "quiet", "remove", "update", "getsums="])
+        ["mp3","confirm", "file=", "help", "license", "master", "nocheck", "quiet", "remove", "update", "getsums=", "compare"])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -382,6 +401,8 @@ if __name__ == "__main__":
             update = True
         elif opt in ["-s", "--getsums"]:
             sumsoutput = value.split(",")
+        elif opt in ["-cmp", "--compare"]:
+            compare = True
     if len(args) == 0:
         log("WARNING", "Exiting because no directories given (use -h for help)")
         sys.exit(0)
@@ -389,6 +410,11 @@ if __name__ == "__main__":
     # Remove old changelog
     if op.exists(changelog):
         os.remove(changelog)
+
+    if compare:
+        if len(args) != 2 or not op.isfile(args[0]) or not op.isfile(args[1]):
+            log("WARNING", "Expected two pathnames to md5 files.")
+        comparemd5files(args[0], args[1])
     
     # Treat each argument separately
     for index, start in enumerate(args):
