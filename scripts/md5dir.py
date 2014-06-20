@@ -58,8 +58,9 @@ utility (http://www.gnu.org/software/textutils/textutils.html).
   of outputting CHANGED lines). After updating, such files should be
   CONFIRMED on subsequent runs.
 
--s/--getsums
-  With this flag no comparison is made only the md5sum file is created.
+-s/--getsums=X
+  With this flag no comparison is made only the md5sum file is created at the
+  location X.
 
 Copyright 2007 G raham P oulter
 """
@@ -250,6 +251,7 @@ def md5dir(root, filenames, master):
         if fname == hashfile:
             continue
         newhash = calcsum(fname, use_mp3mode)
+        fname = op.abspath(fname)
         if fname not in checksums:
             checksums[fname] = newhash
             if newhash in deleted:
