@@ -58,6 +58,9 @@ utility (http://www.gnu.org/software/textutils/textutils.html).
   of outputting CHANGED lines). After updating, such files should be
   CONFIRMED on subsequent runs.
 
+-s/--getsums
+  With this flag no comparison is made only the md5sum file is created.
+
 Copyright 2007 G raham P oulter
 """
 
@@ -94,6 +97,7 @@ remove = False      # Whether to work in 'REMOVING md5sum' mode
 update = False      # Whether to update changed checksums
 mp3mode = False     # Whether to use tag-skipping checksum for MP3s
 changelog = "md5changes.txt" # Names of changed files
+sumsoutput = None
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -147,7 +151,7 @@ def readsums(filepath):
             continue
         yield match.group(1), match.group(2)
 
-def writesums(filepath, checksums, master, mp3mode):
+def writesums(filepath, checksums, master=None, mp3mode=None):
     """Given a list of (filename,md5) in checksums, write them to
     filepath in md5sum format sorted by filename, with a #md5dir
     header"""
@@ -196,6 +200,19 @@ def log(msg, filename):
     if not quiet:
         print "%-10s%s" % (msg, filename)
 
+def makesums(root, filenames, output):
+    # Decide whether to use mp3mode
+    use_mp3mode = mp3mode
+    if "mp3mode" in hashflags(root):
+        use_mp3mode = True
+
+    checksums = {}
+    for fname in filenames:
+        newhash = calcsum(op.join(root,fname), use_mp3mode)
+        checksums[op.abspath(fname)] = newhash
+    writesums(output, checksums.iteritems())
+
+
 def md5dir(root, filenames, master):
     """Write an md5sum file in root for the list of filenames
     (specified relative to root).
@@ -227,7 +244,6 @@ def md5dir(root, filenames, master):
             present[md5] = fname
         else:
             deleted[md5] = fname
-
     # Read files from directory
     newhash = None
     for fname in filenames:
@@ -256,9 +272,6 @@ def md5dir(root, filenames, master):
                 changed.append(fname)
                 if update:
                     checksums[fname] = newhash
-    # End the line of progress dots
-    if newhash and not quiet:
-        sys.stdout.write("\n")
 
     # Log all changes
     if confirm:
@@ -341,7 +354,7 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3","confirm", "file=", "help", "license", "master", "nocheck", "quiet", "remove", "update"])
+        ["mp3","confirm", "file=", "help", "license", "master", "nocheck", "quiet", "remove", "update", "getsums="])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -365,6 +378,8 @@ if __name__ == "__main__":
             remove = True
         elif opt in ["-u", "--update"]:
             update = True
+        elif opt in ["-s", "--getsums"]:
+            sumsoutput = value
     if len(args) == 0:
         log("WARNING", "Exiting because no directories given (use -h for help)")
         sys.exit(0)
@@ -388,6 +403,10 @@ if __name__ == "__main__":
                     if fname == hashfile:
                         log("REMOVING", op.join(root,fname))
                         os.remove(op.join(root,fname))
+
+        # Output checksums only
+        elif sumsoutput:
+            makesums(start, master_list(start), sumsoutput)
 
         # Master checksum
         elif master:
