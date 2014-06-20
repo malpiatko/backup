@@ -10,13 +10,13 @@ import os.path as op
 from email.mime.text import MIMEText
 
 def main(directory, config, output, stdout=False):
-	# Read configuration file
-	cf = configReader.ConfigReader(config)
 
 	# Find the changes since last update and write to output.txt or standard output.
 	mdFilePath = op.join(op.dirname(op.realpath(__file__)),"md5dir.py")
 	mdCommandArgs = ["python", mdFilePath, "-m", directory]
 	if not stdout:
+		# Read configuration file
+		cf = configReader.ConfigReader(config)
 		outputFile = open(output, "w+")	
 		changedFiles = subprocess.check_output(mdCommandArgs)
 		outputFile.write(changedFiles)
