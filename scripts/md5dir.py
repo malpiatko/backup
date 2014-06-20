@@ -381,7 +381,7 @@ if __name__ == "__main__":
         elif opt in ["-u", "--update"]:
             update = True
         elif opt in ["-s", "--getsums"]:
-            sumsoutput = value
+            sumsoutput = value.split(",")
     if len(args) == 0:
         log("WARNING", "Exiting because no directories given (use -h for help)")
         sys.exit(0)
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         os.remove(changelog)
     
     # Treat each argument separately
-    for start in args:
+    for index, start in enumerate(args):
         if not op.isdir(start):
             log("WARNING", "Argument %s is not a directory" % start)
             continue
@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
         # Output checksums only
         elif sumsoutput:
-            makesums(start, master_list(start), sumsoutput)
+            makesums(start, master_list(start), sumsoutput[index])
 
         # Master checksum
         elif master:
