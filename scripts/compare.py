@@ -29,8 +29,6 @@ output.
   Does not output the changes. Suitable for initialising a directory.
 """
 
-
-
 from getopt import getopt
 import md5
 import os
@@ -61,11 +59,11 @@ def comparemd5dict(d1, d2):
     changed = diff.changed()
     unchanged = diff.unchanged()
     for fname in added:
-        log("ADDED " + op.abspath(fname))
+        log("ADDED %s" % op.abspath(fname))
     for fname in deleted:
-        log("DELETED " + op.abspath(fname))
+        log("DELETED %s" % op.abspath(fname))
     for fname in changed:
-        log("CHANGED " + op.abspath(fname))
+        log("CHANGED %s" % op.abspath(fname))
     log("STATUS: confirmed %d added %d deleted %d changed %d" % (
         len(unchanged), len(added), len(deleted), len(changed)))
 
