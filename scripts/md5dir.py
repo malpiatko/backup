@@ -88,7 +88,7 @@ import struct
 import sys
 import magic
 import errno
-import dicdiff
+import dictdiff
 
 hashfile = "md5sum" # Default name for checksum file 
 check = True        # Whether to check for changes
@@ -212,11 +212,11 @@ def makesums(root, filenames, output):
     checksums = {}
     for fname in filenames:
         newhash = calcsum(op.join(root,fname), use_mp3mode)
-        checksums[op.abspath(fname)] = newhash
+        checksums[fname] = newhash
     writesums(output, checksums.iteritems())
 
 def comparemd5files(file1, file2):
-    diff = dicdiff.DictDiffer(readsums(file2),readsums(file1))
+    diff = dictdiff.DictDiffer(readsums(file2),readsums(file1))
     for fname in diff.added:
         log("ADDED", op.join(root,fname))
     for fname in diff.removed:
