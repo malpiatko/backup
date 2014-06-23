@@ -51,7 +51,7 @@ quiet = False
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
 
 
-def comparemd5dict(d1, d2):
+def comparemd5dict(d1, d2, root):
     """ Compares two md5sum files. """
     diff = dictdiff.DictDiffer(d2, d1)
     added = diff.added()
@@ -59,11 +59,12 @@ def comparemd5dict(d1, d2):
     changed = diff.changed()
     unchanged = diff.unchanged()
     for fname in added:
-        log("ADDED %s" % op.abspath(fname))
+        log("ADDED: %s" % op.join(root,fname))
     for fname in deleted:
-        log("DELETED %s" % op.abspath(fname))
+        log("DELETED: %s" % op.join(root,fname))
     for fname in changed:
-        log("CHANGED %s" % op.abspath(fname))
+        log("CHANGED: %s" % op.join(root,fname))
+    log("LOCATION: %s" % root)
     log("STATUS: confirmed %d added %d deleted %d changed %d" % (
         len(unchanged), len(added), len(deleted), len(changed)))
 
@@ -220,7 +221,8 @@ if __name__ == "__main__":
             print "Exiting because two file pathnames expected."
             sys.exit(0)
         else:
-            comparemd5dict(getDictionary(args[0]), getDictionary(args[1]))
+            comparemd5dict(getDictionary(args[0]), getDictionary(args[1]),
+                op.dirname(args[0]))
     # Compare two directories
     elif twodir:
         if len(args) != 2 or not op.isdir(args[0]) or not op.isdir(args[1]):
@@ -228,7 +230,7 @@ if __name__ == "__main__":
         else:
             sums1 = makesums(args[0])
             sums2 = makesums(args[1])
-            comparemd5dict(sums1, sums2)
+            comparemd5dict(sums1, sums2, args[0])
 
     # Analyze the given directories.
     else:
@@ -238,7 +240,7 @@ if __name__ == "__main__":
                 print "Argument %s is not a directory" % start
                 continue
             sums1 = getDictionary(op.join(start, hashfile))
-            comparemd5dict(sums1, makesums(start))
+            comparemd5dict(sums1, makesums(start), args[0])
 
     if output:
         output.close()
