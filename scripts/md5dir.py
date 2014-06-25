@@ -118,7 +118,7 @@ def master_list(start):
                     flist.append(fname)
             except OSError, e:
                 if e.errno == errno.ENOENT:
-                    print 'BROKEN: %s' % fname
+                    log('BROKEN: %s' % fname)
                 else:
                     raise e
     os.chdir(oldcwd)
