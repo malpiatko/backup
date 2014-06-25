@@ -1,5 +1,5 @@
 ignore:
-    - "[*/].[Cc]ache/*"
-    - ".[Cc]cache/*"
+    - "*/.[Cc]ache/*"
+    - ".[Cc]ache/*"
     - "*.localstorage*"
-    - ".config/config/chromium/*"
+    - ".config/chromium/*"

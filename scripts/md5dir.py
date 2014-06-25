@@ -44,7 +44,6 @@ import os.path as op
 import re
 import struct
 import sys
-import magic
 import errno
 import dictdiff
 import yaml
@@ -134,11 +133,7 @@ def master_list(start):
                         fname = os.readlink(fname)
                         if not op.isabs(fname):
                             fname = op.join(root[2:], fname)
-                with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-                    fileType = m.id_filename(fname)
-                # Ignore sockets.
-                if fileType != "inode/socket":
-                    flist.append(fname)
+                flist.append(fname)
             except OSError, e:
                 if e.errno == errno.ENOENT:
                     log('BROKEN: %s' % fname)
@@ -187,13 +182,17 @@ def calcsum(filepath, mp3mode):
     if mp3mode and filepath.endswith(".mp3"):
         return calculateUID(filepath)
     h = md5.new()
-    f = open(filepath, "rb")
-    s = f.read(1048576)
-    while s != "":
-        h.update(s)
+    try:
+        f = open(filepath, "rb")
         s = f.read(1048576)
-    f.close()
-    return h.hexdigest()
+        while s != "":
+            h.update(s)
+            s = f.read(1048576)
+        f.close()
+        return h.hexdigest()
+    except IOError:
+        log("Can't open %s" % filepath)
+        return -1
 
 def writesums(root, checksums):
     """Given a list of (filename,md5) in checksums, write them to
@@ -211,7 +210,8 @@ def makesums(root):
     checksums = {}
     for fname in master_list(root):
         newhash = calcsum(op.join(root,fname), mp3mode)
-        checksums[fname] = newhash
+        if newhash != -1:
+            checksums[fname] = newhash
     writesums(root, checksums.iteritems())
     return checksums
 
