@@ -113,8 +113,7 @@ def toignore(filename):
     return False
 
 def master_list(start):
-    """Return a list of files relative to start directory, and remove
-    all hashfiles except the one directly under start. """
+    """Return a list of files relative to start directory."""
     flist = []
     oldcwd = os.getcwd()
     os.chdir(start)
@@ -230,7 +229,7 @@ if __name__ == "__main__":
         if opt in ["-3", "--mp3"]:
             mp3mode = True
         elif opt in ["-o", "--output"]:
-            output = open(value, "w+")
+            output = open(value, "w")
         elif opt in ["-h","--help"]:
             print __doc__
             sys.exit(0)

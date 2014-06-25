@@ -1,0 +1,58 @@
+BROKEN: .thunderbird/4vbe8uib.default/lock
+BROKEN: .config/chromium/SingletonLock
+BROKEN: .config/chromium/SingletonCookie
+CHANGED: .local/share/zeitgeist/fts.index/postlist.DB
+CHANGED: .thunderbird/4vbe8uib.default/ImapMail/imap.lshift.net/INBOX.msf
+CHANGED: .config/chromium/Default/Visited Links
+CHANGED: .config/chromium/Default/Network Action Predictor-journal
+CHANGED: .local/share/zeitgeist/activity.sqlite-wal
+CHANGED: .config/chromium/Default/Current Session
+CHANGED: .thunderbird/4vbe8uib.default/panacea.dat
+CHANGED: .config/chromium/Local State
+CHANGED: .config/chromium/Default/Local Storage/http_wiadomosci.gazeta.pl_0.localstorage-journal
+CHANGED: .config/chromium/Default/TransportSecurity
+CHANGED: .config/chromium/Default/Shortcuts-journal
+CHANGED: .local/share/zeitgeist/fts.index/postlist.baseB
+CHANGED: .config/chromium/Default/Local Storage/https_www.google.co.uk_0.localstorage-journal
+CHANGED: .config/chromium/Default/Application Cache/Index-journal
+CHANGED: .local/share/zeitgeist/activity.sqlite-shm
+CHANGED: .config/chromium/Default/Application Cache/Cache/data_1
+CHANGED: .config/chromium/Default/Local Storage/https_trello.com_0.localstorage
+CHANGED: .config/dconf/user
+CHANGED: .local/share/zeitgeist/fts.index/position.DB
+CHANGED: .config/chromium/Default/Local Storage/https_www.airbnb.co.uk_0.localstorage
+CHANGED: .config/chromium/Default/Favicons-journal
+CHANGED: .config/chromium/Default/Local Storage/https_www.facebook.com_0.localstorage-journal
+CHANGED: .local/share/recently-used.xbel
+CHANGED: .config/chromium/Default/Network Action Predictor
+CHANGED: .config/chromium/Default/QuotaManager-journal
+CHANGED: .thunderbird/4vbe8uib.default/global-messages-db.sqlite
+CHANGED: .local/share/zeitgeist/fts.index/record.baseB
+CHANGED: .thunderbird/4vbe8uib.default/ImapMail/imap.lshift.net/lshift.sbd/shared.sbd/internal.sbd/whereabouts.msf
+CHANGED: .config/chromium/Default/Favicons
+CHANGED: .local/share/zeitgeist/fts.index/termlist.DB
+CHANGED: .local/share/zeitgeist/fts.index/position.baseB
+CHANGED: .config/chromium/Default/Cookies
+CHANGED: .config/chromium/Default/Cookies-journal
+CHANGED: backupProject/config.yaml
+CHANGED: .config/chromium/Default/Local Storage/https_trello.com_0.localstorage-journal
+CHANGED: .config/sublime-text-2/Settings/Auto Save Session.sublime_session
+CHANGED: backupProject/scripts/md5dir.py
+CHANGED: .config/chromium/Default/History
+CHANGED: .thunderbird/4vbe8uib.default/ImapMail/imap.lshift.net/lshift.sbd/shared.sbd/internal.sbd/whereabouts
+CHANGED: .config/chromium/Default/Session Storage/000267.log
+CHANGED: .config/chromium/Default/Local Storage/http_wiadomosci.gazeta.pl_0.localstorage
+CHANGED: .local/share/zeitgeist/fts.index/termlist.baseB
+CHANGED: .config/chromium/Default/QuotaManager
+CHANGED: .config/chromium/Default/IndexedDB/https_www.google.co.uk_0.indexeddb.leveldb/000930.log
+CHANGED: .config/chromium/Default/Local Storage/https_www.google.co.uk_0.localstorage
+CHANGED: md5sum
+CHANGED: .config/chromium/Default/History-journal
+CHANGED: .config/chromium/Default/Application Cache/Index
+CHANGED: .config/xpad/content-F7H2FX
+CHANGED: .config/chromium/Default/Local Storage/https_www.facebook.com_0.localstorage
+CHANGED: .local/share/zeitgeist/fts.index/record.DB
+CHANGED: .config/chromium/Default/Local Storage/https_www.airbnb.co.uk_0.localstorage-journal
+CHANGED: .config/chromium/Default/Shortcuts
+LOCATION: /home/ela
+STATUS: confirmed 144816 added 0 deleted 0 changed 53
