@@ -1,3 +1,9 @@
+"""
+Usage: main [options] [directories]
+
+"""
+
+
 #!/usr/bin/python
 import smtplib
 import configReader

@@ -29,6 +29,9 @@ output.
 
 -q/--quiet
   Does not output the changes. Suitable for initialising a directory.
+
+-i/--ignore=X
+  Specifies the YAML file with directories/files to be ignored.
 """
 
 from getopt import getopt
@@ -41,6 +44,8 @@ import sys
 import magic
 import errno
 import dictdiff
+import yaml
+import fnmatch
 
 hashfile = "md5sum" # Default name for checksum file
 output = None
@@ -48,6 +53,7 @@ mp3mode = False     # Whether to use tag-skipping checksum for MP3s
 comparefiles = False
 twodir = False
 quiet = False
+ignores = []
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -60,15 +66,18 @@ def comparemd5dict(d1, d2, root):
     deleted = diff.removed()
     changed = diff.changed()
     unchanged = diff.unchanged()
-    for fname in added:
-        log("ADDED: %s" % fname)
-    for fname in deleted:
-        log("DELETED: %s" % fname)
-    for fname in changed:
-        log("CHANGED: %s" % fname)
+    outputfilelist("ADDED", added)
+    outputfilelist("DELETED", deleted)
+    outputfilelist("CHANGED", changed)
     log("LOCATION: %s" % root)
     log("STATUS: confirmed %d added %d deleted %d changed %d" % (
         len(unchanged), len(added), len(deleted), len(changed)))
+
+
+def outputfilelist(name, filelist):
+    for fname in filelist:
+        if not toignore(fname):
+            log("%s: %s" %(name, fname))
 
 def log(msg):
     """ Writes given message to the relevant output.""" 
@@ -78,12 +87,13 @@ def log(msg):
         else:
             print msg
 
-def getDictionary(file):
+def getDictionary(filename):
     """ Converts the md5sum file into a dictionary of filename -> md5sum """
     d = {}
-    if not op.isfile(file):
+    # If file doesn't exists we return an empty dictionary.
+    if not op.isfile(filename):
         return d
-    with open(file) as f:
+    with open(filename) as f:
         for line in f:
             match = md5line.match(line.rstrip(""))
             # Skip non-md5sum lines
@@ -91,6 +101,11 @@ def getDictionary(file):
                 continue
             d[match.group(2)] = match.group(1)
     return d
+
+def toignore(filename):
+    if filter(lambda patt: fnmatch.fnmatch(filename, patt), ignores):
+        return True
+    return False
 
 def master_list(start):
     """Return a list of files relative to start directory, and remove
@@ -100,8 +115,12 @@ def master_list(start):
     os.chdir(start)
     # Collect all files under start (follow directory symbolic links).
     for root, dirs, files in os.walk(".", followlinks=True):
+        if toignore(root):
+            continue
         for fname in files:
             fname = op.join(root[2:], fname)
+            if toignore(fname):
+                continue
             # Take care of symbolic links pointing to a file.
             try:
                 if op.islink(fname):
@@ -124,7 +143,6 @@ def master_list(start):
     os.chdir(oldcwd)
     return flist
 
-### WARNING: ORIGINAL FUNCTION IS IN MP3MD5.PY - MODIFY THERE
 def calculateUID(filepath):
     """Calculate MD5 for an MP3 excluding ID3v1 and ID3v2 tags if
     present. See www.id3.org for tag format specifications."""
@@ -193,15 +211,20 @@ def makesums(root):
     writesums(root, checksums.iteritems())
     return checksums
 
+def getignores(filepath):
+    with open(filepath, 'r') as f:
+        doc = yaml.load(f)
+    return doc["ignore"]
+
 if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet"])
+        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore="])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
-        elif opt in ["--output"]:
+        elif opt in ["-o", "--output"]:
             output = open(value, "w+")
         elif opt in ["-h","--help"]:
             print __doc__
@@ -212,6 +235,8 @@ if __name__ == "__main__":
             twodir = True
         elif opt in ["-q", "--quiet"]:
             quiet = True
+        elif opt in ["-i", "--ignore"]:
+            ignores = getignores(value)
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
