@@ -197,11 +197,11 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help"])
+        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet"])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
-        elif opt in ["-o", "--output"]:
+        elif opt in ["--output"]:
             output = open(value, "w+")
         elif opt in ["-h","--help"]:
             print __doc__
