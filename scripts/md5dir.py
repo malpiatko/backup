@@ -32,6 +32,9 @@ output.
 
 -i/--ignore=X
   Specifies the YAML file with directories/files to be ignored.
+
+--time
+  Outputs the runtime of the program. Development purpose only.
 """
 
 from getopt import getopt
@@ -46,6 +49,7 @@ import errno
 import dictdiff
 import yaml
 import fnmatch
+import timeit
 
 hashfile = "md5sum" # Default name for checksum file
 output = None
@@ -54,6 +58,7 @@ comparefiles = False
 twodir = False
 quiet = False
 ignores = []
+time = False
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -220,7 +225,7 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore="])
+        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time"])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -237,6 +242,9 @@ if __name__ == "__main__":
             quiet = True
         elif opt in ["-i", "--ignore"]:
             ignores = getignores(value)
+        elif opt in ["--time"]:
+            time = True
+            beginning = timeit.default_timer()
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
@@ -271,3 +279,7 @@ if __name__ == "__main__":
 
     if output:
         output.close()
+
+    if time:
+        total = timeit.default_timer() - beginning
+        print "%.5f" % total
