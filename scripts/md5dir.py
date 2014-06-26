@@ -39,6 +39,9 @@ output.
 -u/--update
   Takes two arguments. First is the location of md5sum file to be updated and
   second one is the directory to analyze.
+
+--hashfile=X
+  Specify the location of the md5sum.
 """
 
 from getopt import getopt
@@ -230,7 +233,7 @@ if __name__ == "__main__":
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
         ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time",
-        "update"])
+        "update", "hashfile="])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -252,6 +255,8 @@ if __name__ == "__main__":
             beginning = timeit.default_timer()
         elif opt in ["-u", "--update"]:
             update = True
+        elif opt in ["--hashfile"]:
+            hashfile = op.abspath(value)
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
