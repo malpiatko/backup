@@ -3,3 +3,4 @@ ignore:
     - ".[Cc]ache/*"
     - "*.localstorage*"
     - ".config/chromium/*"
+    - "usr/bin/md5sum.textutils"

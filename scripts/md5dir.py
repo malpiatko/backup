@@ -35,6 +35,10 @@ output.
 
 --time
   Outputs the runtime of the program. Development purpose only.
+
+-u/--update
+  Takes two arguments. First is the location of md5sum file to be updated and
+  second one is the directory to analyze.
 """
 
 from getopt import getopt
@@ -58,6 +62,7 @@ twodir = False
 quiet = False
 ignores = []
 time = False
+update = False
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -198,7 +203,8 @@ def writesums(root, checksums):
     """Given a list of (filename,md5) in checksums, write them to
     filepath in md5sum format sorted by filename, with a #md5dir
     header"""
-    f = open(op.join(root, hashfile), "w")
+    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile) 
+    f = open(pathname, "w")
     f.write("#md5dir %s\n" % root)
     for fname, md5 in sorted(checksums, key=lambda x:x[0]):
         f.write("%s  %s\n" % (md5, fname))
@@ -212,7 +218,6 @@ def makesums(root):
         newhash = calcsum(op.join(root,fname), mp3mode)
         if newhash != -1:
             checksums[fname] = newhash
-    writesums(root, checksums.iteritems())
     return checksums
 
 def getignores(filepath):
@@ -224,7 +229,8 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time"])
+        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time",
+        "update"])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -244,6 +250,8 @@ if __name__ == "__main__":
         elif opt in ["--time"]:
             time = True
             beginning = timeit.default_timer()
+        elif opt in ["-u", "--update"]:
+            update = True
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
@@ -264,7 +272,21 @@ if __name__ == "__main__":
         else:
             sums1 = makesums(args[0])
             sums2 = makesums(args[1])
+            writesums(args[0], sums1.iteritems())
+            writesums(args[1], sums2.iteritems())
             comparemd5dict(sums1, sums2, op.abspath(args[0]))
+    elif update:
+        if len(args) != 2 or not op.isfile(args[0]) or not op.isdir((args[1])):
+            print ("Exiting because pathnames to md5sum file and a directory ",
+            "was expected.")
+        else:
+            sums1 = getDictionary(args[0])
+            hashfile = op.abspath(args[0])
+            sums2 = makesums(args[1])
+            # Update the md5sum file.
+            writesums(args[1], sums2.iteritems())
+            # Output the comparison. 
+            comparemd5dict(sums1, sums2, op.abspath(args[1]))
 
     # Analyze the given directories.
     else:
@@ -274,7 +296,9 @@ if __name__ == "__main__":
                 print "Argument %s is not a directory" % start
                 continue
             sums1 = getDictionary(op.join(start, hashfile))
-            comparemd5dict(sums1, makesums(start), op.abspath(args[0]))
+            sums2 = makesums(start)
+            writesums(start, sums2.iteritems())
+            comparemd5dict(sums1, sums2, op.abspath(args[0]))
 
     if output:
         output.close()
