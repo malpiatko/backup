@@ -36,12 +36,9 @@ output.
 --time
   Outputs the runtime of the program. Development purpose only.
 
--u/--update
-  Takes two arguments. First is the location of md5sum file to be updated and
-  second one is the directory to analyze.
-
 --hashfile=X
-  Specify the location of the md5sum.
+  Specify the location of the md5sum. X can be a list if analyzing several
+  directories.
 """
 
 from getopt import getopt
@@ -66,6 +63,7 @@ quiet = False
 ignores = []
 time = False
 update = False
+hashfiles = []
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -233,7 +231,7 @@ if __name__ == "__main__":
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
         ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time",
-        "update", "hashfile="])
+        "hashfile="])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -253,10 +251,9 @@ if __name__ == "__main__":
         elif opt in ["--time"]:
             time = True
             beginning = timeit.default_timer()
-        elif opt in ["-u", "--update"]:
-            update = True
         elif opt in ["--hashfile"]:
-            hashfile = op.abspath(value)
+            hashfiles=value.split(",")
+            hashfile = op.abspath(hashfiles[0])
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
@@ -280,27 +277,23 @@ if __name__ == "__main__":
             writesums(args[0], sums1.iteritems())
             writesums(args[1], sums2.iteritems())
             comparemd5dict(sums1, sums2, op.abspath(args[0]))
-    elif update:
-        if len(args) != 2 or not op.isfile(args[0]) or not op.isdir((args[1])):
-            print ("Exiting because pathnames to md5sum file and a directory ",
-            "was expected.")
-        else:
-            sums1 = getDictionary(args[0])
-            hashfile = op.abspath(args[0])
-            sums2 = makesums(args[1])
-            # Update the md5sum file.
-            writesums(args[1], sums2.iteritems())
-            # Output the comparison. 
-            comparemd5dict(sums1, sums2, op.abspath(args[1]))
 
     # Analyze the given directories.
     else:
+        if hashfiles != [] and len(hashfiles) != len(args):
+            print str("The number of hashfiles is different to the number of "
+                "directories.")
+            sys.exit()
         # Treat each argument separately
         for index, start in enumerate(args):
             if not op.isdir(start):
                 print "Argument %s is not a directory" % start
                 continue
-            sums1 = getDictionary(op.join(start, hashfile))
+            if hashfiles != []:
+                hashfile = op.abspath(hashfiles[index])
+                sums1 = getDictionary(hashfile)
+            else:
+                sums1 = getDictionary(op.join(start, hashfile))
             sums2 = makesums(start)
             writesums(start, sums2.iteritems())
             comparemd5dict(sums1, sums2, op.abspath(args[0]))
