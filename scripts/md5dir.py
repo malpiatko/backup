@@ -102,19 +102,17 @@ def log(msg):
 
 
 def getDictionary(filename):
-    """ Converts the md5sum file into a dictionary of filename -> md5sum """
-    d = {}
     # If file doesn't exists we return an empty dictionary.
     if not op.isfile(filename):
-        return d
+        return
     with open(filename) as f:
         for line in f:
             match = md5line.match(line.rstrip(""))
             # Skip non-md5sum lines
             if not match:
                 continue
-            d[match.group(2)] = match.group(1)
-    return d
+            yield {"file": match.group(2),
+                   "md5": match.group(1)}
 
 
 def toignore(filename):
@@ -125,7 +123,7 @@ def toignore(filename):
 
 def master_list(start):
     # Collect all files under start (follow directory symbolic links).
-    for root, dirs, files in os.walk(".", followlinks=True):
+    for root, dirs, files in os.walk(start, followlinks=True):
         # Find actual path to root.
         root = op.join(start, root)
         if toignore(root):
@@ -224,11 +222,11 @@ def makesums(root):
     fp = open(pathname, "w")
     fp.write("#md5dir %s\n" % root)
     for fname in master_list(root):
-        newhash = calcsum(op.join(root, fname), mp3mode)
+        newhash = calcsum(fname, mp3mode)
         if newhash != -1:
-            fp.write("%s  %s\n" % (md5, fname))
+            fp.write("%s  %s\n" % (newhash, fname))
     fp.close()
-    subprocess.call(["sort", "-k", "2"])
+    subprocess.call(["sort", "-k", "2", "-o", pathname, pathname])
 
 
 def getignores(filepath):
@@ -238,10 +236,58 @@ def getignores(filepath):
 
 
 def compare(path1, path2, dir):
-    #Make sure you're at the beginning of the file
-    file1 = open(path1, "w")
-    file2 = open(path2, "w")
-    print file1
+    # Helper functions for iterating.
+    def neckst(item):
+        return next(item, -1)
+
+    confirmed = 0
+    changed = 0
+    added = 0
+    deleted = 0
+    old = getDictionary(path1)
+    new = getDictionary(path2)
+    dictold = neckst(old)
+    dictnew = neckst(new)
+    if dictold != -1 and dictnew != -1:
+        while True:
+            # Match. Both proceed to next element.
+            pathold = dictold["file"]
+            pathnew = dictnew["file"]
+            if pathold == pathnew:
+                if dictold["md5"] != dictnew["md5"]:
+                    log("CHANGED: %s" % pathold)
+                    changed += 1
+                else:
+                    confirmed += 1
+                dictold = neckst(old)
+                dictnew = neckst(new)
+            # File got deleted. Old proceed to next element.
+            elif pathold < pathnew:
+                log("DELETED: %s" % pathold)
+                deleted += 1
+                dictold = neckst(old)
+            # File got added. New proceed to next element.
+            else:
+                log("ADDED: %s" % pathnew)
+                added += 1
+                dictnew = neckst(new)
+            if dictold == -1 or dictnew == -1:
+                break
+    if dictold == -1:
+        dictnew = neckst(new)
+        while dictnew != -1:
+            log("ADDED: %s" % dictnew["file"])
+            added += 1
+            dictnew = neckst(new)
+    elif dictnew == -1:
+        dictold = neckst(old)
+        while dictold != -1:
+            log("ADDED: %s" % dictold["file"])
+            added += 1
+            dictold = neckst(old)
+
+    log("STATUS: confirmed %d added %d deleted %d changed %d" % (
+        confirmed, added, deleted, changed))
 
 
 if __name__ == "__main__":
