@@ -54,15 +54,14 @@ import yaml
 import fnmatch
 import timeit
 
-hashfile = "md5sum" # Default name for checksum file
-output = None
-mp3mode = False     # Whether to use tag-skipping checksum for MP3s
+hashfile = "md5sum"  # Default name for checksum file.
+output = None        # By default we output to stdout.
+mp3mode = False      # Whether to use tag-skipping checksum for MP3s.
 comparefiles = False
 twodir = False
-quiet = False
-ignores = []
-time = False
-update = False
+quiet = False        # By default the result of comparison is outputed.
+ignores = []         # By default don't ignore any files.
+time = False         # By default don't compute the runtime
 hashfiles = []
 
 # Regular expression for lines in GNU md5sum file
@@ -87,15 +86,17 @@ def comparemd5dict(d1, d2, root):
 def outputfilelist(name, filelist):
     for fname in filelist:
         if not toignore(fname):
-            log("%s: %s" %(name, fname))
+            log("%s: %s" % (name, fname))
+
 
 def log(msg):
-    """ Writes given message to the relevant output.""" 
+    """ Writes given message to the relevant output."""
     if not quiet:
         if output:
             output.write(msg + "\n")
         else:
             print msg
+
 
 def getDictionary(filename):
     """ Converts the md5sum file into a dictionary of filename -> md5sum """
@@ -112,10 +113,12 @@ def getDictionary(filename):
             d[match.group(2)] = match.group(1)
     return d
 
+
 def toignore(filename):
     if filter(lambda patt: fnmatch.fnmatch(filename, patt), ignores):
         return True
     return False
+
 
 def master_list(start):
     """Return a list of files relative to start directory."""
@@ -148,12 +151,13 @@ def master_list(start):
     os.chdir(oldcwd)
     return flist
 
+
 def calculateUID(filepath):
     """Calculate MD5 for an MP3 excluding ID3v1 and ID3v2 tags if
     present. See www.id3.org for tag format specifications."""
     f = open(filepath, "rb")
     # Detect ID3v1 tag if present
-    finish = os.stat(filepath).st_size;
+    finish = os.stat(filepath).st_size
     f.seek(-128, 2)
     if f.read(3) == "TAG":
         finish -= 128
@@ -165,10 +169,10 @@ def calculateUID(filepath):
         # Flags byte (5)
         flags = struct.unpack("B", f.read(1))[0]
         # Flat bit 4 means footer is present (10 bytes)
-        footer = flags & (1<<4)
+        footer = flags & (1 << 4)
         # Size of tag body synchsafe integer (6-9)
         bs = struct.unpack("BBBB", f.read(4))
-        bodysize = (bs[0]<<21) + (bs[1]<<14) + (bs[2]<<7) + bs[3]
+        bodysize = (bs[0] << 21) + (bs[1] << 14) + (bs[2] << 7) + bs[3]
         # Seek to end of ID3v2 tag
         f.seek(bodysize, 1)
         if footer:
@@ -178,9 +182,10 @@ def calculateUID(filepath):
     # Calculate MD5 using stuff between tags
     f.seek(start)
     h = md5.new()
-    h.update(f.read(finish-start))
+    h.update(f.read(finish - start))
     f.close()
     return h.hexdigest()
+
 
 def calcsum(filepath, mp3mode):
     """Return md5 checksum for a file. Uses the tag-skipping algorithm
@@ -200,26 +205,29 @@ def calcsum(filepath, mp3mode):
         log("Can't open %s" % filepath)
         return -1
 
+
 def writesums(root, checksums):
     """Given a list of (filename,md5) in checksums, write them to
     filepath in md5sum format sorted by filename, with a #md5dir
     header"""
-    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile) 
+    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
     f = open(pathname, "w")
     f.write("#md5dir %s\n" % root)
-    for fname, md5 in sorted(checksums, key=lambda x:x[0]):
+    for fname, md5 in sorted(checksums, key=lambda x: x[0]):
         f.write("%s  %s\n" % (md5, fname))
     f.close()
+
 
 def makesums(root):
     """Creates an md5sum file for the given directory and returns the
     dictionary."""
     checksums = {}
     for fname in master_list(root):
-        newhash = calcsum(op.join(root,fname), mp3mode)
+        newhash = calcsum(op.join(root, fname), mp3mode)
         if newhash != -1:
             checksums[fname] = newhash
     return checksums
+
 
 def getignores(filepath):
     with open(filepath, 'r') as f:
@@ -230,14 +238,14 @@ if __name__ == "__main__":
     # Parse command-line options
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet", "ignore=", "time",
-        "hashfile="])
+        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet",
+         "ignore=", "time", "hashfile="])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
         elif opt in ["-o", "--output"]:
             output = open(value, "w")
-        elif opt in ["-h","--help"]:
+        elif opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
         elif opt in ["-c", "--comparefiles"]:
@@ -252,12 +260,11 @@ if __name__ == "__main__":
             time = True
             beginning = timeit.default_timer()
         elif opt in ["--hashfile"]:
-            hashfiles=value.split(",")
+            hashfiles = value.split(",")
             hashfile = op.abspath(hashfiles[0])
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
-
 
     # Compare two md5sum files.
     if comparefiles:
@@ -266,7 +273,7 @@ if __name__ == "__main__":
             sys.exit(0)
         else:
             comparemd5dict(getDictionary(args[0]), getDictionary(args[1]),
-                op.abspath(op.dirname(args[0])))
+                           op.abspath(op.dirname(args[0])))
     # Compare two directories
     elif twodir:
         if len(args) != 2 or not op.isdir(args[0]) or not op.isdir(args[1]):
@@ -282,7 +289,7 @@ if __name__ == "__main__":
     else:
         if hashfiles != [] and len(hashfiles) != len(args):
             print str("The number of hashfiles is different to the number of "
-                "directories.")
+                      "directories.")
             sys.exit()
         # Treat each argument separately
         for index, start in enumerate(args):
