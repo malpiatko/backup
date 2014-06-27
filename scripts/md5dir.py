@@ -53,6 +53,9 @@ import dictdiff
 import yaml
 import fnmatch
 import timeit
+import tempfile
+import shutil
+import subprocess
 
 hashfile = "md5sum"  # Default name for checksum file.
 output = None        # By default we output to stdout.
@@ -121,16 +124,14 @@ def toignore(filename):
 
 
 def master_list(start):
-    """Return a list of files relative to start directory."""
-    flist = []
-    oldcwd = os.getcwd()
-    os.chdir(start)
     # Collect all files under start (follow directory symbolic links).
     for root, dirs, files in os.walk(".", followlinks=True):
+        # Find actual path to root.
+        root = op.join(start, root)
         if toignore(root):
             continue
         for fname in files:
-            fname = op.join(root[2:], fname)
+            fname = op.join(root, fname)
             if toignore(fname):
                 continue
             # Take care of symbolic links pointing to a file.
@@ -140,16 +141,15 @@ def master_list(start):
                         # is not broken.
                         os.stat(fname)
                         fname = os.readlink(fname)
+                        # os.readlink() may or maynot return absolute path. If
                         if not op.isabs(fname):
-                            fname = op.join(root[2:], fname)
-                flist.append(fname)
+                            fname = op.join(root, fname)
+                yield op.relpath(fname, start)
             except OSError, e:
                 if e.errno == errno.ENOENT:
                     log('BROKEN: %s' % fname)
                 else:
                     raise e
-    os.chdir(oldcwd)
-    return flist
 
 
 def calculateUID(filepath):
@@ -219,20 +219,30 @@ def writesums(root, checksums):
 
 
 def makesums(root):
-    """Creates an md5sum file for the given directory and returns the
-    dictionary."""
-    checksums = {}
+    """Creates an md5sum file in the hashfile location."""
+    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
+    fp = open(pathname, "w")
+    fp.write("#md5dir %s\n" % root)
     for fname in master_list(root):
         newhash = calcsum(op.join(root, fname), mp3mode)
         if newhash != -1:
-            checksums[fname] = newhash
-    return checksums
+            fp.write("%s  %s\n" % (md5, fname))
+    fp.close()
+    subprocess.call(["sort", "-k", "2"])
 
 
 def getignores(filepath):
     with open(filepath, 'r') as f:
         doc = yaml.load(f)
     return doc["ignore"]
+
+
+def compare(path1, path2, dir):
+    #Make sure you're at the beginning of the file
+    file1 = open(path1, "w")
+    file2 = open(path2, "w")
+    print file1
+
 
 if __name__ == "__main__":
     # Parse command-line options
@@ -298,12 +308,20 @@ if __name__ == "__main__":
                 continue
             if hashfiles != []:
                 hashfile = op.abspath(hashfiles[index])
-                sums1 = getDictionary(hashfile)
             else:
-                sums1 = getDictionary(op.join(start, hashfile))
-            sums2 = makesums(start)
-            writesums(start, sums2.iteritems())
-            comparemd5dict(sums1, sums2, op.abspath(args[0]))
+                hashfile = op.join(op.abspath(start), hashfile)
+
+            # Copy the content of md5sum into a temporary file.
+            file1 = tempfile.NamedTemporaryFile(delete=False)
+            if op.isfile(hashfile):
+                with open(hashfile, "r") as fp:
+                    shutil.copyfileobj(fp, file1)
+            file1.close()
+            # Update the hashfile.
+            makesums(start)
+            # Compare the files.
+            compare(file1.name, hashfile, op.abspath(start))
+            os.unlink(file1.name)
 
     if output:
         output.close()
