@@ -1,5 +1,5 @@
 """
-Modified from http://snipplr.com/view/4023/ 
+Modified from http://snipplr.com/view/4023/
 
 Usage: md5dir [options] [directories]
 
@@ -39,6 +39,10 @@ output.
 --hashfile=X
   Specify the location of the md5sum. X can be a list if analyzing several
   directories.
+
+-v/--verbose
+  If set the program will output progress status.
+
 """
 
 from getopt import getopt
@@ -66,6 +70,8 @@ quiet = False        # By default the result of comparison is outputed.
 ignores = []         # By default don't ignore any files.
 time = False         # By default don't compute the runtime
 hashfiles = []
+verbose = False
+fileno = 0
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -200,7 +206,7 @@ def calcsum(filepath, mp3mode):
         f.close()
         return h.hexdigest()
     except IOError:
-        log("Can't open %s" % filepath)
+        log("BROKEN: %s" % filepath)
         return -1
 
 
@@ -218,15 +224,22 @@ def writesums(root, checksums):
 
 def makesums(root):
     """Creates an md5sum file in the hashfile location."""
+    progress("Creating md5sum file.")
+    global fileno
     pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
     fp = open(pathname, "w")
-    fp.write("#md5dir %s\n" % root)
+
     for fname in master_list(root):
-        newhash = calcsum(fname, mp3mode)
+        if fileno % 1000 == 0:
+            progress("Computing md5, %d files analyzed." % fileno)
+        newhash = calcsum(op.join(root, fname), mp3mode)
         if newhash != -1:
             fp.write("%s  %s\n" % (newhash, fname))
+            fileno += 1
     fp.close()
+    progress("Sorting the md5sum file.")
     subprocess.call(["sort", "-k", "2", "-o", pathname, pathname])
+    progress("Finished sorting the md5sum file.")
 
 
 def getignores(filepath):
@@ -239,7 +252,7 @@ def compare(path1, path2, dir):
     # Helper functions for iterating.
     def neckst(item):
         return next(item, -1)
-
+    progress("Comparing the md5sum files.")
     confirmed = 0
     changed = 0
     added = 0
@@ -278,7 +291,7 @@ def compare(path1, path2, dir):
             log("ADDED: %s" % pathnew)
             added += 1
             dictnew = neckst(new)
-            
+
     if dictold == -1:
         dictnew = neckst(new)
         while dictnew != -1:
@@ -291,9 +304,13 @@ def compare(path1, path2, dir):
             log("ADDED: %s" % dictold["file"])
             added += 1
             dictold = neckst(old)
-
     log("STATUS: confirmed %d added %d deleted %d changed %d" % (
         confirmed, added, deleted, changed))
+
+
+def progress(message):
+    if verbose:
+        print "PROGRESS: %s" % message
 
 
 if __name__ == "__main__":
@@ -301,7 +318,7 @@ if __name__ == "__main__":
     optlist, args = getopt(
         sys.argv[1:], "3cf:hlmnqru",
         ["mp3", "output=", "comparefiles", "twodir", "help", "quiet",
-         "ignore=", "time", "hashfile="])
+         "ignore=", "time", "hashfile=", "verbose"])
     for opt, value in optlist:
         if opt in ["-3", "--mp3"]:
             mp3mode = True
@@ -324,6 +341,8 @@ if __name__ == "__main__":
         elif opt in ["--hashfile"]:
             hashfiles = value.split(",")
             hashfile = op.abspath(hashfiles[0])
+        elif opt in ["-v", "--verbose"]:
+            verbose = True
     if len(args) == 0:
         print "Exiting because no directories given (use -h for help)"
         sys.exit(0)
