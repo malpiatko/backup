@@ -9,13 +9,13 @@ Then use this file for comparing current version of the directory with a previou
 the md5dir script with the following command:
 
  `python scripts/md5dir.py [options] [directories]`
- 
+
  For first time usage on a directory I recommend to use the "--quiet" so that you don't end up with a
  massive list of added files.
 
  Standard usage:
 
- `python scripts/md5dir.py --hashfile=md5sum --ignore=example/config.yaml --verbose --output="compare.txt" dir`.
+ `python scripts/md5dir.py --hashfile=md5sum --ignore=example/config.yaml --verbose --output="compare.txt" dir`
 
  Add "--time" to see how long it took to run.
 
