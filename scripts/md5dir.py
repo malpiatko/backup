@@ -248,31 +248,37 @@ def compare(path1, path2, dir):
     new = getDictionary(path2)
     dictold = neckst(old)
     dictnew = neckst(new)
-    if dictold != -1 and dictnew != -1:
-        while True:
-            # Match. Both proceed to next element.
-            pathold = dictold["file"]
-            pathnew = dictnew["file"]
-            if pathold == pathnew:
-                if dictold["md5"] != dictnew["md5"]:
-                    log("CHANGED: %s" % pathold)
-                    changed += 1
-                else:
-                    confirmed += 1
-                dictold = neckst(old)
-                dictnew = neckst(new)
-            # File got deleted. Old proceed to next element.
-            elif pathold < pathnew:
-                log("DELETED: %s" % pathold)
-                deleted += 1
-                dictold = neckst(old)
-            # File got added. New proceed to next element.
+    while True:
+        if dictold == -1 or dictnew == -1:
+            break
+        # Match. Both proceed to next element.
+        pathold = dictold["file"]
+        pathnew = dictnew["file"]
+        if toignore(pathold):
+            dictold = neckst(old)
+            continue
+        if toignore(pathnew):
+            dictnew = neckst(new)
+            continue
+        if pathold == pathnew:
+            if dictold["md5"] != dictnew["md5"]:
+                log("CHANGED: %s" % pathold)
+                changed += 1
             else:
-                log("ADDED: %s" % pathnew)
-                added += 1
-                dictnew = neckst(new)
-            if dictold == -1 or dictnew == -1:
-                break
+                confirmed += 1
+            dictold = neckst(old)
+            dictnew = neckst(new)
+        # File got deleted. Old proceed to next element.
+        elif pathold < pathnew:
+            log("DELETED: %s" % pathold)
+            deleted += 1
+            dictold = neckst(old)
+        # File got added. New proceed to next element.
+        else:
+            log("ADDED: %s" % pathnew)
+            added += 1
+            dictnew = neckst(new)
+            
     if dictold == -1:
         dictnew = neckst(new)
         while dictnew != -1:
