@@ -128,10 +128,9 @@ def toignore(filename):
 
 
 def master_list(start):
+    print "start %s" % start
     # Collect all files under start (follow directory symbolic links).
     for root, dirs, files in os.walk(start, followlinks=True):
-        # Find actual path to root.
-        root = op.join(start, root)
         if toignore(root):
             continue
         for fname in files:
@@ -223,20 +222,20 @@ def writesums(root, checksums):
 
 
 def makesums(root):
-    """Creates an md5sum file in the hashfile location."""
+    """Creates an md5sum file in the location specified by the global
+    variable hashfile."""
     progress("Creating md5sum file.")
-    global fileno
+    fileno = 0
+    print op.isabs(hashfile)
     pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
-    fp = open(pathname, "w")
-
-    for fname in master_list(root):
-        if fileno % 1000 == 0:
-            progress("Computing md5, %d files analyzed." % fileno)
-        newhash = calcsum(op.join(root, fname), mp3mode)
-        if newhash != -1:
-            fp.write("%s  %s\n" % (newhash, fname))
-            fileno += 1
-    fp.close()
+    with open(pathname, "w") as fp:
+        for fname in master_list(root):
+            if fileno % 1000 == 0:
+                progress("Computing md5, %d files analyzed." % fileno)
+            newhash = calcsum(op.join(root, fname), mp3mode)
+            if newhash != -1:
+                fp.write("%s  %s\n" % (newhash, fname))
+                fileno += 1
     progress("Sorting the md5sum file.")
     subprocess.call(["sort", "-k", "2", "-o", pathname, pathname])
     progress("Finished sorting the md5sum file.")
@@ -249,9 +248,14 @@ def getignores(filepath):
 
 
 def compare(path1, path2, dir):
-    # Helper functions for iterating.
+    """Compares two md5sum files and writes the differences to the
+    relevant output."""
+
+    # Helper functions for iterating, which returns -1 if there
+    # are no elements left.
     def neckst(item):
         return next(item, -1)
+
     progress("Comparing the md5sum files.")
     confirmed = 0
     changed = 0
@@ -352,25 +356,38 @@ if __name__ == "__main__":
         if len(args) != 2 or not op.isfile(args[0]) or not op.isfile(args[1]):
             print "Exiting because two file pathnames expected."
             sys.exit(0)
-        else:
-            comparemd5dict(getDictionary(args[0]), getDictionary(args[1]),
-                           op.abspath(op.dirname(args[0])))
+
+        compare(args[0], args[1], op.abspath(op.dirname(args[0])))
+
     # Compare two directories
+    # If the hashfiles are given in the flag save the md5sum files accordingly,
+    # otherwise use temporary files.
     elif twodir:
         if len(args) != 2 or not op.isdir(args[0]) or not op.isdir(args[1]):
             print "Exiting because two directory pathnames expected."
+            sys.exit()
+        if hashfiles != []:
+            if len(hashfiles) != 2:
+                print str("The hashfile flag expects two pathnames")
+                sys.exit()
+                file1 = hashfiles[0]
+                file2 = hashfiles[1]
         else:
-            sums1 = makesums(args[0])
-            sums2 = makesums(args[1])
-            writesums(args[0], sums1.iteritems())
-            writesums(args[1], sums2.iteritems())
-            comparemd5dict(sums1, sums2, op.abspath(args[0]))
+            file1 = tempfile.NamedTemporaryFile(delete=False).name
+            file2 = tempfile.NamedTemporaryFile(delete=False).name
+        hashfile = op.abspath(file1)
+        makesums(args[0])
+        hashfile = op.abspath(file2)
+        makesums(args[1])
+        compare(file1, file2, op.abspath(args[0]))
 
     # Analyze the given directories.
+    # If the hashfiles are given in flag use them, otherwise assume each
+    # directory has a md5sum under the path given in the hashfile variable.
     else:
         if hashfiles != [] and len(hashfiles) != len(args):
-            print str("The number of hashfiles is different to the number of "
-                      "directories.")
+            print str("The number of hashfiles given in the flag is different"
+                      "to the number of directories.")
             sys.exit()
         # Treat each argument separately
         for index, start in enumerate(args):

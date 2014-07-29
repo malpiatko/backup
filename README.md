@@ -18,4 +18,3 @@ the md5dir script with the following command:
  `python scripts/md5dir.py --hashfile=md5sum --ignore=example/config.yaml --verbose --output="compare.txt" dir`
 
  Add "--time" to see how long it took to run. 
-
