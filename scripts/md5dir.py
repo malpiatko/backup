@@ -168,8 +168,8 @@ def calcsum(filepath, mp3mode):
 
 
 def makesums(root, hashfile):
-    """Creates an md5sum file in the location specified by the global
-    variable hashfile."""
+    """Creates an md5sum file for the given directory
+    in the location specified."""
     progress("Creating md5sum file.")
     with open(hashfile, "w") as fp:
         for index, fname in enumerate(master_list(root)):
@@ -189,8 +189,8 @@ def getignores(filepath):
     return doc["ignore"]
 
 
-def compare(path1, path2, dir):
-    """Compares two md5sum files and writes the differences to the
+def compare(path1, path2):
+    """Compare two md5sum files and writes the differences to the
     relevant output."""
 
     # Helper functions for iterating, which returns -1 if there
@@ -255,6 +255,7 @@ def compare(path1, path2, dir):
 
 
 def progress(message):
+    """If the verbose flag is set output progress message."""
     if verbose:
         print "PROGRESS: %s" % message
 
@@ -270,7 +271,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description_msg)
     parser.add_argument("-c", "--comparefiles", nargs=2, help=compare_help)
     parser.add_argument("-3", "--mp3", action="store_true", help=mp3_help)
-    #TODO: check for help before it was print __doc__ sys.exit(0)
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
                         default=sys.stdout, help=output_help)
     parser.add_argument("-t", "--twodir", action="store_true",
@@ -283,12 +283,14 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--ignore")
 
     args = parser.parse_args()
-    
+
+    # Store global variables.
     output = args.output
     mp3mode = args.mp3
     suppresschanges = args.suppresschanges
     verbose = args.verbose
 
+    # Saves files and directories to ignore.
     if args.ignore:
         ignores = getignores(args.ignore)
 
@@ -299,12 +301,12 @@ if __name__ == "__main__":
         if not op.isfile(file1) or not op.isfile(file2):
             print "Exiting because the arguments are not files."
             sys.exit(0)
-        compare(file1, file2, op.abspath(op.dirname(file1)))
+        compare(file1, file2)
     # All other options use the dirs command line argument.
     else:
         for item in args.dirs:
             pair = item.split(":")
-            directory = {"directory": pair[0]}
+            directory = {"path": pair[0]}
             directory["file"] = pair[1] if len(pair) == 2 else None
             dirs.append(directory)
 
@@ -315,14 +317,16 @@ if __name__ == "__main__":
                 sys.exit(0)
             arg1 = dirs[0]
             arg2 = dirs[1]
-            if not op.isdir(arg1["directory"]) or not op.isdir(arg2["directory"]):
+            if not op.isdir(arg1["path"]) or not op.isdir(arg2["path"]):
                 print "Exiting because arguments are not directory pathnames."
                 sys.exit()
-            file1 = arg1["file"] or tempfile.NamedTemporaryFile(delete=False).name
-            file2 = arg2["file"] or tempfile.NamedTemporaryFile(delete=False).name
-            makesums(arg1["directory"], file1)
-            makesums(arg2["directory"], file2)
-            compare(file1, file2, op.abspath(arg1["directory"]))
+            file1 = arg1["file"] or \
+                tempfile.NamedTemporaryFile(delete=False).name
+            file2 = arg2["file"] or \
+                tempfile.NamedTemporaryFile(delete=False).name
+            makesums(arg1["path"], file1)
+            makesums(arg2["path"], file2)
+            compare(file1, file2)
 
         # Analyze the given directories.
         else:
@@ -346,5 +350,5 @@ if __name__ == "__main__":
                 # Update the hashfile.
                 makesums(start, hashfile)
                 # Compare the files.
-                compare(file1.name, hashfile, op.abspath(start))
+                compare(file1.name, hashfile)
                 os.unlink(file1.name)
