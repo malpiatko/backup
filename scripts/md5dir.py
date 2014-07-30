@@ -314,6 +314,8 @@ if __name__ == "__main__":
     global output
     global mp3mode
 
+    dirs = []
+
     # Parse command-line options
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--comparefiles", nargs=2)
@@ -321,15 +323,16 @@ if __name__ == "__main__":
     #TODO: check for help before it was print __doc__ sys.exit(0)
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
                         default=sys.stdout)
-    parser.add_argument("-t", "--twodir", nargs=2)
+    parser.add_argument("-t", "--twodir", action="store_true")
     parser.add_argument("-q", "--quiet", action="store_true")
     # TODO: timeit.default_timer()
     parser.add_argument("--time", action="store_true")
-    parser.add_argument("--hashfiles", nargs="*")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("dirs", nargs="*")
+
     # TODO the variable is called ignores, function getignores
     parser.add_argument("-i", "--ignore")
+
     args = parser.parse_args()
     
     output = args.output
@@ -343,60 +346,56 @@ if __name__ == "__main__":
             print "Exiting because the arguments are not files."
             sys.exit(0)
         compare(file1, file2, op.abspath(op.dirname(file1)))
-
-    # Compare two directories
-    # If the hashfiles are given in the flag save the md5sum files accordingly,
-    # otherwise use temporary files.
-    elif args.twodir:
-        dir1 = args.twodir[0]
-        dir2 = args.twodir[1]
-        if not op.isdir(dir1) or not op.isdir(dir2):
-            print "Exiting because arguments are not directory pathnames."
-            sys.exit()
-        if args.hashfiles:
-            if len(args.hashfiles) != 2:
-                print str("The hashfile flag expects two pathnames")
-                sys.exit()
-            file1 = args.hashfiles[0]
-            file2 = args.hashfiles[1]
-        else:
-            file1 = tempfile.NamedTemporaryFile(delete=False).name
-            file2 = tempfile.NamedTemporaryFile(delete=False).name
-        hashfile = op.abspath(file1)
-        makesums(dir1)
-        hashfile = op.abspath(file2)
-        makesums(dir2)
-        compare(file1, file2, op.abspath(dir1))
-
-    # Analyze the given directories.
-    # If the hashfiles are given in flag use them, otherwise assume each
-    # directory has a md5sum under the path given in the hashfile variable.
+    # All other options use the dirs command line argument.
     else:
-        if args.hashfiles and len(args.hashfiles) != len(args.dirs):
-            print str("The number of hashfiles given (%d) in the flag is different "
-                      "to the number of directories (%d)." % (len(args.hashfiles), len(args.dirs)))
-            sys.exit()
-        # Treat each argument separately
-        for index, start in enumerate(args.dirs):
-            if not op.isdir(start):
-                print "Argument %s is not a directory" % start
-                continue
-            if args.hashfiles:
-                hashfile = op.abspath(args.hashfiles[index])
-            else:
-                hashfile = op.join(op.abspath(start), hashfile)
+        for item in args.dirs:
+            pair = item.split(":")
+            directory = {"directory": pair[0]}
+            directory["file"] = pair[1] if len(pair) == 2 else None
+            dirs.append(directory)
 
-            # Copy the content of md5sum into a temporary file.
-            file1 = tempfile.NamedTemporaryFile(delete=False)
-            if op.isfile(hashfile):
-                with open(hashfile, "r") as fp:
-                    shutil.copyfileobj(fp, file1)
-            file1.close()
-            # Update the hashfile.
-            makesums(start)
-            # Compare the files.
-            compare(file1.name, hashfile, op.abspath(start))
-            os.unlink(file1.name)
+        # Compare two directories
+        if args.twodir:
+            if len(dirs) != 2:
+                print "Two arguments expected."
+                sys.exit(0)
+            arg1 = dirs[0]
+            arg2 = dirs[1]
+            if not op.isdir(arg1["directory"]) or not op.isdir(arg2["directory"]):
+                print "Exiting because arguments are not directory pathnames."
+                sys.exit()
+            file1 = arg1["file"] or tempfile.NamedTemporaryFile(delete=False).name
+            file2 = arg2["file"] or tempfile.NamedTemporaryFile(delete=False).name
+            hashfile = op.abspath(file1)
+            makesums(arg1["directory"])
+            hashfile = op.abspath(file2)
+            makesums(arg2["directory"])
+            compare(file1, file2, op.abspath(arg1["directory"]))
+
+        # Analyze the given directories.
+        else:
+            # Treat each argument separately
+            for arg in dirs:
+                start = arg["directory"]
+                if not op.isdir(start):
+                    print "Argument %s is not a directory" % start
+                    continue
+                if arg["file"]:
+                    hashfile = op.abspath(arg["file"])
+                else:
+                    op.join(op.abspath(start), hashfile)
+
+                # Copy the content of md5sum into a temporary file.
+                file1 = tempfile.NamedTemporaryFile(delete=False)
+                if op.isfile(hashfile):
+                    with open(hashfile, "r") as fp:
+                        shutil.copyfileobj(fp, file1)
+                file1.close()
+                # Update the hashfile.
+                makesums(start)
+                # Compare the files.
+                compare(file1.name, hashfile, op.abspath(start))
+                os.unlink(file1.name)
 
     if time:
         total = timeit.default_timer() - beginning
