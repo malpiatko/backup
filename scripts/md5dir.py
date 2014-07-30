@@ -353,12 +353,12 @@ if __name__ == "__main__":
         if not op.isdir(dir1) or not op.isdir(dir2):
             print "Exiting because arguments are not directory pathnames."
             sys.exit()
-        if hashfiles != []:
-            if len(hashfiles) != 2:
+        if args.hashfiles:
+            if len(args.hashfiles) != 2:
                 print str("The hashfile flag expects two pathnames")
                 sys.exit()
-                file1 = hashfiles[0]
-                file2 = hashfiles[1]
+            file1 = args.hashfiles[0]
+            file2 = args.hashfiles[1]
         else:
             file1 = tempfile.NamedTemporaryFile(delete=False).name
             file2 = tempfile.NamedTemporaryFile(delete=False).name
