@@ -63,7 +63,6 @@ import argparse
 
 
 hashfile = "md5sum"  # Default name for checksum file.
-twodir = False
 quiet = False        # By default the result of comparison is outputed.
 ignores = []         # By default don't ignore any files.
 time = False         # By default don't compute the runtime
@@ -123,7 +122,6 @@ def toignore(filename):
 
 
 def master_list(start):
-    print "start %s" % start
     # Collect all files under start (follow directory symbolic links).
     for root, dirs, files in os.walk(start, followlinks=True):
         if toignore(root):
@@ -222,7 +220,6 @@ def makesums(root):
     variable hashfile."""
     progress("Creating md5sum file.")
     fileno = 0
-    print op.isabs(hashfile)
     pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
     with open(pathname, "w") as fp:
         for fname in master_list(root):
@@ -315,6 +312,7 @@ def progress(message):
 
 if __name__ == "__main__":
     global output
+    global mp3mode
 
     # Parse command-line options
     parser = argparse.ArgumentParser()
@@ -350,8 +348,8 @@ if __name__ == "__main__":
     # If the hashfiles are given in the flag save the md5sum files accordingly,
     # otherwise use temporary files.
     elif args.twodir:
-        dir1 = twodir[0]
-        dir2 = twodir[1]
+        dir1 = args.twodir[0]
+        dir2 = args.twodir[1]
         if not op.isdir(dir1) or not op.isdir(dir2):
             print "Exiting because arguments are not directory pathnames."
             sys.exit()
