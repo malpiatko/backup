@@ -65,8 +65,6 @@ import argparse
 hashfile = "md5sum"  # Default name for checksum file.
 ignores = []         # By default don't ignore any files.
 time = False         # By default don't compute the runtime
-verbose = False
-fileno = 0
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
@@ -217,16 +215,14 @@ def makesums(root):
     """Creates an md5sum file in the location specified by the global
     variable hashfile."""
     progress("Creating md5sum file.")
-    fileno = 0
     pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
     with open(pathname, "w") as fp:
-        for fname in master_list(root):
-            if fileno % 1000 == 0:
-                progress("Computing md5, %d files analyzed." % fileno)
+        for index, fname in enumerate(master_list(root)):
+            if verbose and index % verbose == 0:
+                progress("Computing md5, %d files analyzed." % index)
             newhash = calcsum(op.join(root, fname), mp3mode)
             if newhash != -1:
                 fp.write("%s  %s\n" % (newhash, fname))
-                fileno += 1
     progress("Sorting the md5sum file.")
     subprocess.call(["sort", "-k", "2", "-o", pathname, pathname])
     progress("Finished sorting the md5sum file.")
@@ -312,6 +308,7 @@ if __name__ == "__main__":
     global output
     global mp3mode
     global suppress_changes
+    global verbose
     dirs = []
 
     # Parse command-line options
@@ -325,7 +322,7 @@ if __name__ == "__main__":
     parser.add_argument("--suppress_changes", action="store_true")
     # TODO: timeit.default_timer()
     parser.add_argument("--time", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-v", "--verbose", nargs="?", const=1000, type=int)
     parser.add_argument("dirs", nargs="*")
 
     # TODO the variable is called ignores, function getignores
@@ -336,6 +333,7 @@ if __name__ == "__main__":
     output = args.output
     mp3mode = args.mp3
     suppress_changes = args.suppress_changes
+    verbose = args.verbose
 
     # Compare two md5sum files.
     if args.comparefiles:
