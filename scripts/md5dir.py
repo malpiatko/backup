@@ -7,35 +7,6 @@ Without options it writes an 'md5sum' file in each of the specified directories
 and compares it with its previous state. It writes the differences to standard
 output.
 
--3/--mp3
-  Enable MP3 mode: for files ending in .mp3, calculate a checksum
-  which skips ID3v1 and ID3v2 tags.  This checksum differs from the
-  normal one which is compatible with GNU md5sum.  The md5sum file is
-  tagged so that md5dir will in future always use MP3 mode for the
-  directory.  Consider using mp3md5.py instead, which keeps this
-  tag-skipping checksum in the ID3v2 tag as a Unique File ID.
-
--h/--help
-  Output this message then exit.
-
--o/--output=X
-  Write the changes to the file specified as X
-
--c/--comparefiles
-  Compares the two md5sum files specified as arguments.
-
--t/--twodir
-  Creates md5sum files in the two directories specified and compares them.
-
--q/--quiet
-  Does not output the changes. Suitable for initialising a directory.
-
--i/--ignore=X
-  Specifies the YAML file with directories/files to be ignored.
-
--v/--verbose
-  If set the program will output progress status.
-
 """
 
 import md5
@@ -52,6 +23,34 @@ import shutil
 import subprocess
 import argparse
 
+mp3_help = """Enable MP3 mode: for files ending in .mp3, calculate a checksum
+  which skips ID3v1 and ID3v2 tags.  This checksum differs from the
+  normal one which is compatible with GNU md5sum.  The md5sum file is
+  tagged so that md5dir will in future always use MP3 mode for the
+  directory.  Consider using mp3md5.py instead, which keeps this
+  tag-skipping checksum in the ID3v2 tag as a Unique File ID."""
+output_help = """Writes the changes to the specified file instead of the
+  standard output."""
+compare_help = """Compares the two md5sum files given as arguments."""
+twodir_help = """Compares the two directories given as arguments. Creates the
+  hashfiles for the directories only if their location is explicitely
+  specified."""
+suppress_help = """When set the program does not output the changes. Suitable
+  for initialising a directory."""
+ignore_help = """Specifies the YAML file with directories/files to be
+  ignored."""
+verbose_help = """When set the program will output progress status. By default
+  it will ouput a message every 1000 files, this can be changed to any number
+  by giving the optional parameter."""
+dirs_help = """A list of directories to perform the analysis for. By default
+  the program will create/read from md5sum inside each directory. This can be
+  changed by adding an additional argument specifying the path in which the
+  file should be found. Therefore each item of the list can bo of the form
+  dirpath[:filepath]."""
+
+
+
+
 
 hashfilename = "md5sum"  # Default name for checksum file.
 ignores = []         # By default don't ignore any files.
@@ -62,7 +61,7 @@ md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
 
 def log(msg):
     """ Writes given message to the relevant output."""
-    if not suppress_changes:
+    if not suppresschanges:
         output.write(msg + "\n")
 
 
@@ -263,28 +262,31 @@ def progress(message):
 if __name__ == "__main__":
     global output
     global mp3mode
-    global suppress_changes
+    global suppresschanges
     global verbose
     dirs = []
 
     # Parse command-line options
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--comparefiles", nargs=2)
-    parser.add_argument("-3", "--mp3", action="store_true")
+    parser.add_argument("-c", "--comparefiles", nargs=2, help=compare_help)
+    parser.add_argument("-3", "--mp3", action="store_true", help=mp3_help)
     #TODO: check for help before it was print __doc__ sys.exit(0)
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
-                        default=sys.stdout)
-    parser.add_argument("-t", "--twodir", action="store_true")
-    parser.add_argument("--suppress_changes", action="store_true")
-    parser.add_argument("-v", "--verbose", nargs="?", const=1000, type=int)
-    parser.add_argument("dirs", nargs="*")
+                        default=sys.stdout, help=output_help)
+    parser.add_argument("-t", "--twodir", action="store_true",
+                        help=twodir_help)
+    parser.add_argument("--suppresschanges", action="store_true",
+                        help=suppress_help)
+    parser.add_argument("-v", "--verbose", nargs="?", const=1000, type=int,
+                        help=verbose_help)
+    parser.add_argument("dirs", nargs="*", help=dirs_help)
     parser.add_argument("-i", "--ignore")
 
     args = parser.parse_args()
     
     output = args.output
     mp3mode = args.mp3
-    suppress_changes = args.suppress_changes
+    suppresschanges = args.suppresschanges
     verbose = args.verbose
 
     if args.ignore:
