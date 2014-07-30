@@ -327,7 +327,7 @@ if __name__ == "__main__":
     #TODO: check for help before it was print __doc__ sys.exit(0)
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
                         default=sys.stdout)
-    parser.add_argument("-c", "--comparefiles", action="store_true")
+    parser.add_argument("-c", "--comparefiles", nargs=2)
     parser.add_argument("-t", "--twodir", action="store_true")
     parser.add_argument("-q", "--quiet", action="store_true")
     # TODO: timeit.default_timer()
@@ -340,12 +340,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Compare two md5sum files.
-    if args.comparefiles:
-        if len(args.dirs) != 2:
-            print "Expected two arguments"
-            sys.exit(0)
-        file1 = args.dirs[0]
-        file2 = args.dirs[1]
+    if args.comparefiles != []:
+        file1 = args.comparefiles[0]
+        file2 = args.comparefiles[1]
         if not op.isfile(file1) or not op.isfile(file2):
             print "Exiting because the arguments are not files."
             sys.exit(0)
