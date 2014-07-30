@@ -372,17 +372,17 @@ if __name__ == "__main__":
     # If the hashfiles are given in flag use them, otherwise assume each
     # directory has a md5sum under the path given in the hashfile variable.
     else:
-        if hashfiles != [] and len(hashfiles) != len(args):
-            print str("The number of hashfiles given in the flag is different"
-                      "to the number of directories.")
+        if args.hashfiles and len(args.hashfiles) != len(args.dirs):
+            print str("The number of hashfiles given (%d) in the flag is different "
+                      "to the number of directories (%d)." % (len(args.hashfiles), len(args.dirs)))
             sys.exit()
         # Treat each argument separately
-        for index, start in enumerate(args):
+        for index, start in enumerate(args.dirs):
             if not op.isdir(start):
                 print "Argument %s is not a directory" % start
                 continue
-            if hashfiles != []:
-                hashfile = op.abspath(hashfiles[index])
+            if args.hashfiles:
+                hashfile = op.abspath(args.hashfiles[index])
             else:
                 hashfile = op.join(op.abspath(start), hashfile)
 
