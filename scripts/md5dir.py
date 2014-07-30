@@ -33,9 +33,6 @@ output.
 -i/--ignore=X
   Specifies the YAML file with directories/files to be ignored.
 
---time
-  Outputs the runtime of the program. Development purpose only.
-
 --hashfile=X
   Specify the location of the md5sum. X can be a list if analyzing several
   directories.
@@ -55,7 +52,6 @@ import errno
 import dictdiff
 import yaml
 import fnmatch
-import timeit
 import tempfile
 import shutil
 import subprocess
@@ -64,31 +60,9 @@ import argparse
 
 hashfile = "md5sum"  # Default name for checksum file.
 ignores = []         # By default don't ignore any files.
-time = False         # By default don't compute the runtime
 
 # Regular expression for lines in GNU md5sum file
 md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
-
-
-def comparemd5dict(d1, d2, root):
-    """ Compares two md5sum files. """
-    diff = dictdiff.DictDiffer(d2, d1)
-    added = diff.added()
-    deleted = diff.removed()
-    changed = diff.changed()
-    unchanged = diff.unchanged()
-    outputfilelist("ADDED", added)
-    outputfilelist("DELETED", deleted)
-    outputfilelist("CHANGED", changed)
-    log("LOCATION: %s" % root)
-    log("STATUS: confirmed %d added %d deleted %d changed %d" % (
-        len(unchanged), len(added), len(deleted), len(changed)))
-
-
-def outputfilelist(name, filelist):
-    for fname in filelist:
-        if not toignore(fname):
-            log("%s: %s" % (name, fname))
 
 
 def log(msg):
@@ -197,18 +171,6 @@ def calcsum(filepath, mp3mode):
     except IOError:
         log("BROKEN: %s" % filepath)
         return -1
-
-
-def writesums(root, checksums):
-    """Given a list of (filename,md5) in checksums, write them to
-    filepath in md5sum format sorted by filename, with a #md5dir
-    header"""
-    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
-    f = open(pathname, "w")
-    f.write("#md5dir %s\n" % root)
-    for fname, md5 in sorted(checksums, key=lambda x: x[0]):
-        f.write("%s  %s\n" % (md5, fname))
-    f.close()
 
 
 def makesums(root):
@@ -320,8 +282,6 @@ if __name__ == "__main__":
                         default=sys.stdout)
     parser.add_argument("-t", "--twodir", action="store_true")
     parser.add_argument("--suppress_changes", action="store_true")
-    # TODO: timeit.default_timer()
-    parser.add_argument("--time", action="store_true")
     parser.add_argument("-v", "--verbose", nargs="?", const=1000, type=int)
     parser.add_argument("dirs", nargs="*")
 
@@ -393,7 +353,3 @@ if __name__ == "__main__":
                 # Compare the files.
                 compare(file1.name, hashfile, op.abspath(start))
                 os.unlink(file1.name)
-
-    if time:
-        total = timeit.default_timer() - beginning
-        print "%.5f" % total
