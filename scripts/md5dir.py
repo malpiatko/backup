@@ -45,7 +45,6 @@ output.
 
 """
 
-from getopt import getopt
 import md5
 import os
 import os.path as op
@@ -60,6 +59,8 @@ import timeit
 import tempfile
 import shutil
 import subprocess
+import argparse
+
 
 hashfile = "md5sum"  # Default name for checksum file.
 output = None        # By default we output to stdout.
@@ -145,6 +146,7 @@ def master_list(start):
                         os.stat(fname)
                         fname = os.readlink(fname)
                         # os.readlink() may or maynot return absolute path. If
+
                         if not op.isabs(fname):
                             fname = op.join(root, fname)
                 yield op.relpath(fname, start)
@@ -318,51 +320,41 @@ def progress(message):
 
 
 if __name__ == "__main__":
+
     # Parse command-line options
-    optlist, args = getopt(
-        sys.argv[1:], "3cf:hlmnqru",
-        ["mp3", "output=", "comparefiles", "twodir", "help", "quiet",
-         "ignore=", "time", "hashfile=", "verbose"])
-    for opt, value in optlist:
-        if opt in ["-3", "--mp3"]:
-            mp3mode = True
-        elif opt in ["-o", "--output"]:
-            output = open(value, "w")
-        elif opt in ["-h", "--help"]:
-            print __doc__
-            sys.exit(0)
-        elif opt in ["-c", "--comparefiles"]:
-            comparefiles = True
-        elif opt in ["-t", "--twodir"]:
-            twodir = True
-        elif opt in ["-q", "--quiet"]:
-            quiet = True
-        elif opt in ["-i", "--ignore"]:
-            ignores = getignores(value)
-        elif opt in ["--time"]:
-            time = True
-            beginning = timeit.default_timer()
-        elif opt in ["--hashfile"]:
-            hashfiles = value.split(",")
-            hashfile = op.abspath(hashfiles[0])
-        elif opt in ["-v", "--verbose"]:
-            verbose = True
-    if len(args) == 0:
-        print "Exiting because no directories given (use -h for help)"
-        sys.exit(0)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-3", "--mp3", dest="mp3mode", action="store_true")
+    #TODO: check for help before it was print __doc__ sys.exit(0)
+    parser.add_argument("-o", "--output", type=argparse.FileType("w"),
+                        default=sys.stdout)
+    parser.add_argument("-c", "--comparefiles", action="store_true")
+    parser.add_argument("-t", "--twodir", action="store_true")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    # TODO: timeit.default_timer()
+    parser.add_argument("--time", action="store_true")
+    parser.add_argument("--hashfiles", nargs="*")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("dirs", nargs="*")
+    # TODO the variable is called ignores, function getignores
+    parser.add_argument("-i", "--ignore")
+    args = parser.parse_args()
 
     # Compare two md5sum files.
-    if comparefiles:
-        if len(args) != 2 or not op.isfile(args[0]) or not op.isfile(args[1]):
-            print "Exiting because two file pathnames expected."
+    if args.comparefiles:
+        if len(args.dirs) != 2:
+            print "Expected two arguments"
             sys.exit(0)
-
-        compare(args[0], args[1], op.abspath(op.dirname(args[0])))
+        file1 = args.dirs[0]
+        file2 = args.dirs[1]
+        if not op.isfile(file1) or not op.isfile(file2):
+            print "Exiting because the arguments are not files."
+            sys.exit(0)
+        compare(file1, file2, op.abspath(op.dirname(file1)))
 
     # Compare two directories
     # If the hashfiles are given in the flag save the md5sum files accordingly,
     # otherwise use temporary files.
-    elif twodir:
+    elif args.twodir:
         if len(args) != 2 or not op.isdir(args[0]) or not op.isdir(args[1]):
             print "Exiting because two directory pathnames expected."
             sys.exit()
