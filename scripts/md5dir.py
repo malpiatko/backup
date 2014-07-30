@@ -33,10 +33,6 @@ output.
 -i/--ignore=X
   Specifies the YAML file with directories/files to be ignored.
 
---hashfile=X
-  Specify the location of the md5sum. X can be a list if analyzing several
-  directories.
-
 -v/--verbose
   If set the program will output progress status.
 
@@ -49,7 +45,6 @@ import re
 import struct
 import sys
 import errno
-import dictdiff
 import yaml
 import fnmatch
 import tempfile
@@ -58,7 +53,7 @@ import subprocess
 import argparse
 
 
-hashfile = "md5sum"  # Default name for checksum file.
+hashfilename = "md5sum"  # Default name for checksum file.
 ignores = []         # By default don't ignore any files.
 
 # Regular expression for lines in GNU md5sum file
@@ -173,12 +168,11 @@ def calcsum(filepath, mp3mode):
         return -1
 
 
-def makesums(root):
+def makesums(root, hashfile):
     """Creates an md5sum file in the location specified by the global
     variable hashfile."""
     progress("Creating md5sum file.")
-    pathname = hashfile if op.isabs(hashfile) else op.join(root, hashfile)
-    with open(pathname, "w") as fp:
+    with open(hashfile, "w") as fp:
         for index, fname in enumerate(master_list(root)):
             if verbose and index % verbose == 0:
                 progress("Computing md5, %d files analyzed." % index)
@@ -186,7 +180,7 @@ def makesums(root):
             if newhash != -1:
                 fp.write("%s  %s\n" % (newhash, fname))
     progress("Sorting the md5sum file.")
-    subprocess.call(["sort", "-k", "2", "-o", pathname, pathname])
+    subprocess.call(["sort", "-k", "2", "-o", hashfile, hashfile])
     progress("Finished sorting the md5sum file.")
 
 
@@ -284,8 +278,6 @@ if __name__ == "__main__":
     parser.add_argument("--suppress_changes", action="store_true")
     parser.add_argument("-v", "--verbose", nargs="?", const=1000, type=int)
     parser.add_argument("dirs", nargs="*")
-
-    # TODO the variable is called ignores, function getignores
     parser.add_argument("-i", "--ignore")
 
     args = parser.parse_args()
@@ -294,6 +286,9 @@ if __name__ == "__main__":
     mp3mode = args.mp3
     suppress_changes = args.suppress_changes
     verbose = args.verbose
+
+    if args.ignore:
+        ignores = getignores(args.ignore)
 
     # Compare two md5sum files.
     if args.comparefiles:
@@ -323,10 +318,8 @@ if __name__ == "__main__":
                 sys.exit()
             file1 = arg1["file"] or tempfile.NamedTemporaryFile(delete=False).name
             file2 = arg2["file"] or tempfile.NamedTemporaryFile(delete=False).name
-            hashfile = op.abspath(file1)
-            makesums(arg1["directory"])
-            hashfile = op.abspath(file2)
-            makesums(arg2["directory"])
+            makesums(arg1["directory"], file1)
+            makesums(arg2["directory"], file2)
             compare(file1, file2, op.abspath(arg1["directory"]))
 
         # Analyze the given directories.
@@ -340,7 +333,7 @@ if __name__ == "__main__":
                 if arg["file"]:
                     hashfile = op.abspath(arg["file"])
                 else:
-                    op.join(op.abspath(start), hashfile)
+                    hashfile = op.join(op.abspath(start), hashfilename)
 
                 # Copy the content of md5sum into a temporary file.
                 file1 = tempfile.NamedTemporaryFile(delete=False)
@@ -349,7 +342,7 @@ if __name__ == "__main__":
                         shutil.copyfileobj(fp, file1)
                 file1.close()
                 # Update the hashfile.
-                makesums(start)
+                makesums(start, hashfile)
                 # Compare the files.
                 compare(file1.name, hashfile, op.abspath(start))
                 os.unlink(file1.name)
