@@ -1,12 +1,9 @@
 """
 Modified from http://snipplr.com/view/4023/
 
-Usage: md5dir [options] [directories]
-
 Without options it writes an 'md5sum' file in each of the specified directories
 and compares it with its previous state. It writes the differences to standard
 output.
-
 """
 
 import md5
@@ -48,8 +45,11 @@ dirs_help = """A list of directories to perform the analysis for. By default
   file should be found. Therefore each item of the list can bo of the form
   dirpath[:filepath]."""
 
-
-
+description_msg = """By default it checks for differences between the current
+  state of each directory specified as arguments and its previous version saved
+  in the 'md5sum' files, subsequently updating the files. The 'md5sum' file
+  stores the md5 checksums for each file in the directory and its
+  subdirectories."""
 
 
 hashfilename = "md5sum"  # Default name for checksum file.
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     dirs = []
 
     # Parse command-line options
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=description_msg)
     parser.add_argument("-c", "--comparefiles", nargs=2, help=compare_help)
     parser.add_argument("-3", "--mp3", action="store_true", help=mp3_help)
     #TODO: check for help before it was print __doc__ sys.exit(0)
