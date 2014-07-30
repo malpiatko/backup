@@ -63,8 +63,6 @@ import argparse
 
 
 hashfile = "md5sum"  # Default name for checksum file.
-output = None        # By default we output to stdout.
-mp3mode = False      # Whether to use tag-skipping checksum for MP3s.
 twodir = False
 quiet = False        # By default the result of comparison is outputed.
 ignores = []         # By default don't ignore any files.
@@ -101,10 +99,7 @@ def outputfilelist(name, filelist):
 def log(msg):
     """ Writes given message to the relevant output."""
     if not quiet:
-        if output:
-            output.write(msg + "\n")
-        else:
-            print msg
+        output.write(msg + "\n")
 
 
 def getDictionary(filename):
@@ -319,15 +314,16 @@ def progress(message):
 
 
 if __name__ == "__main__":
+    global output
 
     # Parse command-line options
     parser = argparse.ArgumentParser()
-    parser.add_argument("-3", "--mp3", dest="mp3mode", action="store_true")
+    parser.add_argument("-c", "--comparefiles", nargs=2)
+    parser.add_argument("-3", "--mp3", action="store_true")
     #TODO: check for help before it was print __doc__ sys.exit(0)
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
                         default=sys.stdout)
-    parser.add_argument("-c", "--comparefiles", nargs=2)
-    parser.add_argument("-t", "--twodir", action="store_true")
+    parser.add_argument("-t", "--twodir", nargs=2)
     parser.add_argument("-q", "--quiet", action="store_true")
     # TODO: timeit.default_timer()
     parser.add_argument("--time", action="store_true")
@@ -337,6 +333,9 @@ if __name__ == "__main__":
     # TODO the variable is called ignores, function getignores
     parser.add_argument("-i", "--ignore")
     args = parser.parse_args()
+    
+    output = args.output
+    mp3mode = args.mp3
 
     # Compare two md5sum files.
     if args.comparefiles:
@@ -351,8 +350,10 @@ if __name__ == "__main__":
     # If the hashfiles are given in the flag save the md5sum files accordingly,
     # otherwise use temporary files.
     elif args.twodir:
-        if len(args) != 2 or not op.isdir(args[0]) or not op.isdir(args[1]):
-            print "Exiting because two directory pathnames expected."
+        dir1 = twodir[0]
+        dir2 = twodir[1]
+        if not op.isdir(dir1) or not op.isdir(dir2):
+            print "Exiting because arguments are not directory pathnames."
             sys.exit()
         if hashfiles != []:
             if len(hashfiles) != 2:
@@ -364,10 +365,10 @@ if __name__ == "__main__":
             file1 = tempfile.NamedTemporaryFile(delete=False).name
             file2 = tempfile.NamedTemporaryFile(delete=False).name
         hashfile = op.abspath(file1)
-        makesums(args[0])
+        makesums(dir1)
         hashfile = op.abspath(file2)
-        makesums(args[1])
-        compare(file1, file2, op.abspath(args[0]))
+        makesums(dir2)
+        compare(file1, file2, op.abspath(dir1))
 
     # Analyze the given directories.
     # If the hashfiles are given in flag use them, otherwise assume each
@@ -398,9 +399,6 @@ if __name__ == "__main__":
             # Compare the files.
             compare(file1.name, hashfile, op.abspath(start))
             os.unlink(file1.name)
-
-    if output:
-        output.close()
 
     if time:
         total = timeit.default_timer() - beginning
