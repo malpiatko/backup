@@ -63,10 +63,8 @@ import argparse
 
 
 hashfile = "md5sum"  # Default name for checksum file.
-quiet = False        # By default the result of comparison is outputed.
 ignores = []         # By default don't ignore any files.
 time = False         # By default don't compute the runtime
-hashfiles = []
 verbose = False
 fileno = 0
 
@@ -97,7 +95,7 @@ def outputfilelist(name, filelist):
 
 def log(msg):
     """ Writes given message to the relevant output."""
-    if not quiet:
+    if not suppress_changes:
         output.write(msg + "\n")
 
 
@@ -313,7 +311,7 @@ def progress(message):
 if __name__ == "__main__":
     global output
     global mp3mode
-
+    global suppress_changes
     dirs = []
 
     # Parse command-line options
@@ -324,7 +322,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=argparse.FileType("w"),
                         default=sys.stdout)
     parser.add_argument("-t", "--twodir", action="store_true")
-    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("--suppress_changes", action="store_true")
     # TODO: timeit.default_timer()
     parser.add_argument("--time", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -337,6 +335,7 @@ if __name__ == "__main__":
     
     output = args.output
     mp3mode = args.mp3
+    suppress_changes = args.suppress_changes
 
     # Compare two md5sum files.
     if args.comparefiles:
