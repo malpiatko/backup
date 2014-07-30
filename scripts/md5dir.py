@@ -65,7 +65,6 @@ import argparse
 hashfile = "md5sum"  # Default name for checksum file.
 output = None        # By default we output to stdout.
 mp3mode = False      # Whether to use tag-skipping checksum for MP3s.
-comparefiles = False
 twodir = False
 quiet = False        # By default the result of comparison is outputed.
 ignores = []         # By default don't ignore any files.
@@ -340,7 +339,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Compare two md5sum files.
-    if args.comparefiles != []:
+    if args.comparefiles:
         file1 = args.comparefiles[0]
         file2 = args.comparefiles[1]
         if not op.isfile(file1) or not op.isfile(file2):
