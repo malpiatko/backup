@@ -6,6 +6,8 @@ and compares it with its previous state. It writes the differences to standard
 output.
 """
 
+#pylint: disable=C0103,R0902,W0106
+
 import md5
 import os
 import os.path as op
@@ -52,65 +54,163 @@ description_msg = """By default it checks for differences between the current
   subdirectories."""
 
 
-hashfilename = "md5sum"  # Default name for checksum file.
-ignores = []         # By default don't ignore any files.
+class Md5dir(object):
+    """ Md5dir """
 
-# Regular expression for lines in GNU md5sum file
-md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
+    hashfilename = "md5sum"  # Default name for checksum file.
+    ignores = []         # By default don't ignore any files.
+    suppresschanges = False
 
+    # Regular expression for lines in GNU md5sum file
+    md5line = re.compile(r"^([0-9a-f]{32}) [\ \*](.*)$")
 
-def log(msg):
-    """ Writes given message to the relevant output."""
-    if not suppresschanges:
-        output.write(msg + "\n")
+    def log(self, msg):
+        """ Writes given message to the relevant output."""
+        if not self.suppresschanges:
+            output.write(msg + "\n")
 
+    def toignore(self, filename):
+        if filter(lambda patt: fnmatch.fnmatch(filename, patt), self.ignores):
+            return True
+        return False
 
-def getDictionary(filename):
-    # If file doesn't exists we return an empty dictionary.
-    if not op.isfile(filename):
-        return
-    with open(filename) as f:
-        for line in f:
-            match = md5line.match(line.rstrip(""))
-            # Skip non-md5sum lines
-            if not match:
+    def getDictionary(self, filename):
+        # If file doesn't exists we return an empty dictionary.
+        if not op.isfile(filename):
+            return
+        with open(filename) as f:
+            for line in f:
+                match = self.md5line.match(line.rstrip(""))
+                # Skip non-md5sum lines
+                if not match:
+                    continue
+                yield {"file": match.group(2),
+                       "md5": match.group(1)}
+
+    def master_list(self, start):
+        # Collect all files under start (follow directory symbolic links).
+        for root, dirs, files in os.walk(start, followlinks=True):
+            if self.toignore(root):
                 continue
-            yield {"file": match.group(2),
-                   "md5": match.group(1)}
+            for fname in files:
+                fname = op.join(root, fname)
+                if self.toignore(fname):
+                    continue
+                # Take care of symbolic links pointing to a file.
+                try:
+                    if op.islink(fname):
+                            # We are using this command to check whether the link
+                            # is not broken.
+                            os.stat(fname)
+                            fname = os.readlink(fname)
+                            # os.readlink() may or maynot return absolute path. If
 
+                            if not op.isabs(fname):
+                                fname = op.join(root, fname)
+                    yield op.relpath(fname, start)
+                except OSError, e:
+                    if e.errno == errno.ENOENT:
+                        self.log('BROKEN: %s' % fname)
+                    else:
+                        raise e
 
-def toignore(filename):
-    if filter(lambda patt: fnmatch.fnmatch(filename, patt), ignores):
-        return True
-    return False
+    def makesums(self, root, hashfile):
+        """Creates an md5sum file for the given directory
+        in the location specified."""
+        progress("Creating md5sum file.")
+        with open(hashfile, "w") as fp:
+            for index, fname in enumerate(self.master_list(root)):
+                if verbose and index % verbose == 0:
+                    progress("Computing md5, %d files analyzed." % index)
+                newhash = self.calcsum(op.join(root, fname), self.mp3mode)
+                if newhash != -1:
+                    fp.write("%s  %s\n" % (newhash, fname))
+        progress("Sorting the md5sum file.")
+        subprocess.call(["sort", "-k", "2", "-o", hashfile, hashfile])
+        progress("Finished sorting the md5sum file.")
 
+    def calcsum(self, filepath):
+        """Return md5 checksum for a file. Uses the tag-skipping algorithm
+        for .mp3 files if in mp3mode."""
+        if self.mp3mode and filepath.endswith(".mp3"):
+            return calculateUID(filepath)
 
-def master_list(start):
-    # Collect all files under start (follow directory symbolic links).
-    for root, dirs, files in os.walk(start, followlinks=True):
-        if toignore(root):
-            continue
-        for fname in files:
-            fname = op.join(root, fname)
-            if toignore(fname):
+        h = md5.new()
+        try:
+            f = open(filepath, "rb")
+            s = f.read(1048576)
+            while s != "":
+                h.update(s)
+                s = f.read(1048576)
+            f.close()
+            return h.hexdigest()
+        except IOError:
+            self.log("BROKEN: %s" % filepath)
+            return -1
+
+    def compare(self, path1, path2):
+        """Compare two md5sum files and writes the differences to the
+        relevant output."""
+
+        # Helper functions for iterating, which returns -1 if there
+        # are no elements left.
+        def neckst(item):
+            return next(item, -1)
+
+        progress("Comparing the md5sum files.")
+        confirmed = 0
+        changed = 0
+        added = 0
+        deleted = 0
+        old = self.getDictionary(path1)
+        new = self.getDictionary(path2)
+        dictold = neckst(old)
+        dictnew = neckst(new)
+        while True:
+            if dictold == -1 or dictnew == -1:
+                break
+            # Match. Both proceed to next element.
+            pathold = dictold["file"]
+            pathnew = dictnew["file"]
+            if self.toignore(pathold):
+                dictold = neckst(old)
                 continue
-            # Take care of symbolic links pointing to a file.
-            try:
-                if op.islink(fname):
-                        # We are using this command to check whether the link
-                        # is not broken.
-                        os.stat(fname)
-                        fname = os.readlink(fname)
-                        # os.readlink() may or maynot return absolute path. If
-
-                        if not op.isabs(fname):
-                            fname = op.join(root, fname)
-                yield op.relpath(fname, start)
-            except OSError, e:
-                if e.errno == errno.ENOENT:
-                    log('BROKEN: %s' % fname)
+            if self.toignore(pathnew):
+                dictnew = neckst(new)
+                continue
+            if pathold == pathnew:
+                if dictold["md5"] != dictnew["md5"]:
+                    self.log("CHANGED: %s" % pathold)
+                    changed += 1
                 else:
-                    raise e
+                    confirmed += 1
+                dictold = neckst(old)
+                dictnew = neckst(new)
+            # File got deleted. Old proceed to next element.
+            elif pathold < pathnew:
+                self.log("DELETED: %s" % pathold)
+                deleted += 1
+                dictold = neckst(old)
+            # File got added. New proceed to next element.
+            else:
+                self.log("ADDED: %s" % pathnew)
+                added += 1
+                dictnew = neckst(new)
+
+        if dictold == -1:
+            dictnew = neckst(new)
+            while dictnew != -1:
+                self.log("ADDED: %s" % dictnew["file"])
+                added += 1
+                dictnew = neckst(new)
+        elif dictnew == -1:
+            dictold = neckst(old)
+            while dictold != -1:
+                self.log("ADDED: %s" % dictold["file"])
+                added += 1
+                dictold = neckst(old)
+        self.log("STATUS: confirmed %d added %d deleted %d changed %d" % (
+            confirmed, added, deleted, changed))
 
 
 def calculateUID(filepath):
@@ -148,110 +248,10 @@ def calculateUID(filepath):
     return h.hexdigest()
 
 
-def calcsum(filepath, mp3mode):
-    """Return md5 checksum for a file. Uses the tag-skipping algorithm
-    for .mp3 files if in mp3mode."""
-    if mp3mode and filepath.endswith(".mp3"):
-        return calculateUID(filepath)
-    h = md5.new()
-    try:
-        f = open(filepath, "rb")
-        s = f.read(1048576)
-        while s != "":
-            h.update(s)
-            s = f.read(1048576)
-        f.close()
-        return h.hexdigest()
-    except IOError:
-        log("BROKEN: %s" % filepath)
-        return -1
-
-
-def makesums(root, hashfile):
-    """Creates an md5sum file for the given directory
-    in the location specified."""
-    progress("Creating md5sum file.")
-    with open(hashfile, "w") as fp:
-        for index, fname in enumerate(master_list(root)):
-            if verbose and index % verbose == 0:
-                progress("Computing md5, %d files analyzed." % index)
-            newhash = calcsum(op.join(root, fname), mp3mode)
-            if newhash != -1:
-                fp.write("%s  %s\n" % (newhash, fname))
-    progress("Sorting the md5sum file.")
-    subprocess.call(["sort", "-k", "2", "-o", hashfile, hashfile])
-    progress("Finished sorting the md5sum file.")
-
-
 def getignores(filepath):
     with open(filepath, 'r') as f:
         doc = yaml.load(f)
     return doc["ignore"]
-
-
-def compare(path1, path2):
-    """Compare two md5sum files and writes the differences to the
-    relevant output."""
-
-    # Helper functions for iterating, which returns -1 if there
-    # are no elements left.
-    def neckst(item):
-        return next(item, -1)
-
-    progress("Comparing the md5sum files.")
-    confirmed = 0
-    changed = 0
-    added = 0
-    deleted = 0
-    old = getDictionary(path1)
-    new = getDictionary(path2)
-    dictold = neckst(old)
-    dictnew = neckst(new)
-    while True:
-        if dictold == -1 or dictnew == -1:
-            break
-        # Match. Both proceed to next element.
-        pathold = dictold["file"]
-        pathnew = dictnew["file"]
-        if toignore(pathold):
-            dictold = neckst(old)
-            continue
-        if toignore(pathnew):
-            dictnew = neckst(new)
-            continue
-        if pathold == pathnew:
-            if dictold["md5"] != dictnew["md5"]:
-                log("CHANGED: %s" % pathold)
-                changed += 1
-            else:
-                confirmed += 1
-            dictold = neckst(old)
-            dictnew = neckst(new)
-        # File got deleted. Old proceed to next element.
-        elif pathold < pathnew:
-            log("DELETED: %s" % pathold)
-            deleted += 1
-            dictold = neckst(old)
-        # File got added. New proceed to next element.
-        else:
-            log("ADDED: %s" % pathnew)
-            added += 1
-            dictnew = neckst(new)
-
-    if dictold == -1:
-        dictnew = neckst(new)
-        while dictnew != -1:
-            log("ADDED: %s" % dictnew["file"])
-            added += 1
-            dictnew = neckst(new)
-    elif dictnew == -1:
-        dictold = neckst(old)
-        while dictold != -1:
-            log("ADDED: %s" % dictold["file"])
-            added += 1
-            dictold = neckst(old)
-    log("STATUS: confirmed %d added %d deleted %d changed %d" % (
-        confirmed, added, deleted, changed))
 
 
 def progress(message):
