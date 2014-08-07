@@ -56,7 +56,7 @@ description_msg = """By default it checks for differences between the current
 class Md5dir(object):
     """ Md5dir """
 
-    hashfilename = "md5sum"     # Default name for checksum file.
+    hashfile_name = "md5sum"     # Default name for checksum file.
     ignores = []                # By default don't ignore any files.
     dirs = []
 
@@ -65,14 +65,14 @@ class Md5dir(object):
 
     def log(self, msg):
         """Writes given message to the relevant output."""
-        if not self.suppresschanges:
+        if not self.suppress_changes:
             self.output.write(msg + "\n")
 
     def ignore(self, filename):
         """Ignore when at least one matches found."""
         return any([fnmatch.fnmatch(filename, i) for i in self.ignores])
 
-    def getDictionary(self, filename):
+    def get_dict(self, filename):
         """Converts the md5sum file into a dictionary of filename -> md5sum."""
         # If file doesn't exists we return an empty dictionary.
         if not op.isfile(filename):
@@ -112,7 +112,7 @@ class Md5dir(object):
                     else:
                         raise e
 
-    def makesums(self, root, hashfile):
+    def make_sums(self, root, hashfile):
         """Creates an md5sum file for the given directory
         in the location specified."""
         self.progress("Creating md5sum file.")
@@ -120,14 +120,14 @@ class Md5dir(object):
             for index, fname in enumerate(self.master_list(root)):
                 if self.verbose and index % self.verbose == 0:
                     self.progress("Computing md5, %d files analyzed." % index)
-                newhash = self.calcsum(op.join(root, fname))
+                newhash = self.calc_sum(op.join(root, fname))
                 if newhash != -1:
                     fp.write("%s  %s\n" % (newhash, fname))
         self.progress("Sorting the md5sum file.")
         subprocess.call(["sort", "-k", "2", "-o", hashfile, hashfile])
         self.progress("Finished sorting the md5sum file.")
 
-    def calcsum(self, filepath):
+    def calc_sum(self, filepath):
         """Return md5 checksum for a file. Uses the tag-skipping algorithm
         for .mp3 files if in mp3mode."""
         if self.mp3mode and filepath.endswith(".mp3"):
@@ -158,8 +158,8 @@ class Md5dir(object):
         changed = 0
         added = 0
         deleted = 0
-        old = self.getDictionary(path1)
-        new = self.getDictionary(path2)
+        old = self.get_dict(path1)
+        new = self.get_dict(path2)
         dictold = neckst(old)
         dictnew = neckst(new)
         self.log("Analysis of %s" % dirpath)
@@ -215,14 +215,14 @@ class Md5dir(object):
         if self.verbose:
             print "PROGRESS: %s" % message
 
-    def addDirectories(self, dirs):
+    def add_dirs(self, dirs):
         for item in dirs:
             pair = item.split(":")
             directory = {"path": op.abspath(pair[0])}
             directory["file"] = pair[1] if len(pair) == 2 else None
             self.dirs.append(directory)
 
-    def analyzeDirs(self):
+    def analyze_dirs(self):
         # Treat each argument separately
             for arg in self.dirs:
                 start = arg["path"]
@@ -232,7 +232,7 @@ class Md5dir(object):
                 if arg["file"]:
                     hashfile = op.abspath(arg["file"])
                 else:
-                    hashfile = op.join(op.abspath(start), self.hashfilename)
+                    hashfile = op.join(op.abspath(start), self.hashfile_name)
 
                 # Copy the content of md5sum into a temporary file.
                 file1 = tempfile.NamedTemporaryFile(delete=False)
@@ -241,12 +241,12 @@ class Md5dir(object):
                         shutil.copyfileobj(fp, file1)
                 file1.close()
                 # Update the hashfile.
-                self.makesums(start, hashfile)
+                self.make_sums(start, hashfile)
                 # Compare the files.
                 self.compare(file1.name, hashfile, start)
                 os.unlink(file1.name)
 
-    def twoDirComparison(self):
+    def two_dir_comp(self):
         arg1 = self.dirs[0]
         arg2 = self.dirs[1]
         if not op.isdir(arg1["path"]) or not op.isdir(arg2["path"]):
@@ -255,12 +255,12 @@ class Md5dir(object):
             tempfile.NamedTemporaryFile(delete=False).name
         file2 = arg2["file"] or \
             tempfile.NamedTemporaryFile(delete=False).name
-        self.makesums(arg1["path"], file1)
-        self.makesums(arg2["path"], file2)
+        self.make_sums(arg1["path"], file1)
+        self.make_sums(arg2["path"], file2)
         self.compare(file1, file2, "%s, %s" % (arg1["path"], arg2["path"]))
         return True
 
-    def setignores(self, filepath):
+    def set_ignores(self, filepath):
         if not filepath:
             self.ignores = []
             return
@@ -328,11 +328,11 @@ if __name__ == "__main__":
 
     md5dir.output = args.output
     md5dir.mp3mode = args.mp3
-    md5dir.suppresschanges = args.suppresschanges
+    md5dir.suppress_changes = args.suppresschanges
     md5dir.verbose = args.verbose
 
     # Save files and directories to ignore.
-    md5dir.setignores(args.ignore)
+    md5dir.set_ignores(args.ignore)
 
     # Compare two md5sum files.
     if args.comparefiles:
@@ -345,7 +345,7 @@ if __name__ == "__main__":
 
     # All other options use the dirs command line argument.
     else:
-        md5dir.addDirectories(args.dirs)
+        md5dir.add_dirs(args.dirs)
 
         # Compare two directories
         if args.twodir:
@@ -353,10 +353,10 @@ if __name__ == "__main__":
                 print "Two arguments expected."
                 sys.exit(0)
 
-            if not md5dir.twoDirComparison():
+            if not md5dir.two_dir_comp():
                 print "Exiting because arguments are not directory pathnames."
                 sys.exit()
 
         # Analyze the given directories.
         else:
-            md5dir.analyzeDirs()
+            md5dir.analyze_dirs()
