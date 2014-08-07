@@ -120,7 +120,7 @@ class Md5dir(object):
             for index, fname in enumerate(self.master_list(root)):
                 if self.verbose and index % self.verbose == 0:
                     self.progress("Computing md5, %d files analyzed." % index)
-                newhash = self.calcsum(op.join(root, fname), self.mp3mode)
+                newhash = self.calcsum(op.join(root, fname))
                 if newhash != -1:
                     fp.write("%s  %s\n" % (newhash, fname))
         self.progress("Sorting the md5sum file.")
@@ -132,7 +132,6 @@ class Md5dir(object):
         for .mp3 files if in mp3mode."""
         if self.mp3mode and filepath.endswith(".mp3"):
             return self.calculateUID(filepath)
-
         h = md5.new()
         try:
             f = open(filepath, "rb")
@@ -332,7 +331,7 @@ if __name__ == "__main__":
     md5dir.suppresschanges = args.suppresschanges
     md5dir.verbose = args.verbose
 
-    # Saves files and directories to ignore.
+    # Save files and directories to ignore.
     md5dir.ignores = md5dir.setignores(args.ignore)
 
     # Compare two md5sum files.
