@@ -145,10 +145,9 @@ class Md5dir(object):
             self.log("BROKEN: %s" % filepath)
             return -1
 
-    def compare(self, path1, path2):
+    def compare(self, path1, path2, dirpath):
         """Compare two md5sum files and writes the differences to the
         relevant output."""
-
         # Helper functions for iterating, which returns -1 if there
         # are no elements left.
         def neckst(item):
@@ -163,6 +162,7 @@ class Md5dir(object):
         new = self.getDictionary(path2)
         dictold = neckst(old)
         dictnew = neckst(new)
+        self.log("Analysis of %s" % dirpath)
         while True:
             if dictold == -1 or dictnew == -1:
                 break
@@ -218,14 +218,14 @@ class Md5dir(object):
     def addDirectories(self, dirs):
         for item in dirs:
             pair = item.split(":")
-            directory = {"path": pair[0]}
+            directory = {"path": op.abspath(pair[0])}
             directory["file"] = pair[1] if len(pair) == 2 else None
             self.dirs.append(directory)
 
     def analyzeDirs(self):
         # Treat each argument separately
             for arg in self.dirs:
-                start = arg["directory"]
+                start = arg["path"]
                 if not op.isdir(start):
                     print "Argument %s is not a directory" % start
                     continue
@@ -243,7 +243,7 @@ class Md5dir(object):
                 # Update the hashfile.
                 self.makesums(start, hashfile)
                 # Compare the files.
-                self.compare(file1.name, hashfile)
+                self.compare(file1.name, hashfile, start)
                 os.unlink(file1.name)
 
     def twoDirComparison(self):
@@ -257,7 +257,7 @@ class Md5dir(object):
             tempfile.NamedTemporaryFile(delete=False).name
         self.makesums(arg1["path"], file1)
         self.makesums(arg2["path"], file2)
-        self.compare(file1, file2)
+        self.compare(file1, file2, "%s, %s" % (arg1["path"], arg2["path"]))
         return True
 
     def setignores(self, filepath):
@@ -332,16 +332,16 @@ if __name__ == "__main__":
     md5dir.verbose = args.verbose
 
     # Save files and directories to ignore.
-    md5dir.ignores = md5dir.setignores(args.ignore)
+    md5dir.setignores(args.ignore)
 
     # Compare two md5sum files.
     if args.comparefiles:
-        file1 = args.comparefiles[0]
-        file2 = args.comparefiles[1]
+        file1 = op.abspath(args.comparefiles[0])
+        file2 = op.abspath(args.comparefiles[1])
         if not op.isfile(file1) or not op.isfile(file2):
             print "Exiting because the arguments are not files."
             sys.exit(0)
-        md5dir.compare(file1, file2)
+        md5dir.compare(file1, file2, "%s, %s" % (file1, file2))
 
     # All other options use the dirs command line argument.
     else:
