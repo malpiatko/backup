@@ -6,8 +6,6 @@ and compares it with its previous state. It writes the differences to standard
 output.
 """
 
-#pylint: disable=C0103,R0902,W0106
-
 import md5
 import os
 import os.path as op
@@ -57,7 +55,7 @@ class Md5dir(object):
     """ Md5dir """
 
     hashfile_name = "md5sum"     # Default name for checksum file.
-    ignores = []                # By default don't ignore any files.
+    ignores = []                 # By default don't ignore any files.
     dirs = []
 
     # Regular expression for lines in GNU md5sum file
